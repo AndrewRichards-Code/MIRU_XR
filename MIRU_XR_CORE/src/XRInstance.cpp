@@ -20,11 +20,11 @@ Instance::Instance(CreateInfo* pCreateInfo)
 		m_InstanceExtensions.push_back(XR_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
 #if defined(XR_USE_GRAPHICS_API_D3D12)
-		if (m_CI.api == API::D3D12)
+		if (m_CI.api == base::GraphicsAPI::API::D3D12)
 			m_InstanceExtensions.push_back(XR_KHR_D3D12_ENABLE_EXTENSION_NAME);
 #endif
 #if defined(XR_USE_GRAPHICS_API_VULKAN)
-		if (m_CI.api == API::VULKAN)
+		if (m_CI.api == base::GraphicsAPI::API::VULKAN)
 			m_InstanceExtensions.push_back(XR_KHR_VULKAN_ENABLE_EXTENSION_NAME);
 #endif
 	}

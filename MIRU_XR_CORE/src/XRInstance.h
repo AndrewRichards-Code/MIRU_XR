@@ -17,8 +17,8 @@ namespace miru
 			};
 			struct CreateInfo
 			{
-				std::string applicationName;
-				API			api;
+				std::string				applicationName;
+				base::GraphicsAPI::API	api;
 			};
 			struct ResultInfo
 			{

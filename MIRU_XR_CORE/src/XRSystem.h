@@ -21,14 +21,7 @@ namespace miru
 				FormFactor		formFactor;
 			};
 
-		#if defined(MIRU_XR_D3D12)
-			XrGraphicsRequirementsD3D12KHR GetD3D12GraphicsRequirements();
-		#endif
-		#if defined(XR_USE_GRAPHICS_API_VULKAN)
-			XrGraphicsRequirementsVulkanKHR GetVulkanGraphicsRequirements();
-		#endif
-
-			//Methods
+		//Methods
 		public:
 			System(CreateInfo* pCreateInfo);
 			~System();

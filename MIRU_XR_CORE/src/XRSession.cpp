@@ -3,8 +3,14 @@
 #include "XRInstance.h"
 #include "XRSystem.h"
 
+#include "d3d12/D3D12Context.h"
+#include "vulkan/VKContext.h"
+
 using namespace miru;
 using namespace xr;
+
+d3d12::Context::OpenXRD3D12Data openXRD3D12Data = {};
+vulkan::Context::OpenXRVulkanData openXRVulkanData = {};
 
 Session::Session(CreateInfo* pCreateInfo)
 {
@@ -15,28 +21,28 @@ Session::Session(CreateInfo* pCreateInfo)
 
 #if defined(XR_USE_GRAPHICS_API_D3D12)
 	XrGraphicsBindingD3D12KHR xrD3D12GraphicsBinding;
-	if (m_CI.instance->m_CI.api == Instance::API::D3D12)
+	if (m_CI.instance->m_CI.api == base::GraphicsAPI::API::D3D12)
 	{
-		const GraphicsBindingD3D12& graphicsBindingD3D12 = m_CI.graphicsBindingD3D12;
+		d3d12::ContextRef context = ref_cast<d3d12::Context>(m_CI.context);
 		xrD3D12GraphicsBinding.type = XR_TYPE_GRAPHICS_BINDING_D3D12_KHR;
 		xrD3D12GraphicsBinding.next = nullptr;
-		xrD3D12GraphicsBinding.device = graphicsBindingD3D12.device;
-		xrD3D12GraphicsBinding.queue = graphicsBindingD3D12.queue;
+		xrD3D12GraphicsBinding.device = context->m_Device;
+		xrD3D12GraphicsBinding.queue = context->m_Queues[0];
 		m_SessionCI.next = &xrD3D12GraphicsBinding;
 	}
 #endif
 #if defined(XR_USE_GRAPHICS_API_VULKAN)
 	XrGraphicsBindingVulkanKHR xrVulkanGraphicsBinding;
-	if (m_CI.instance->m_CI.api == Instance::API::VULKAN)
+	if (m_CI.instance->m_CI.api == base::GraphicsAPI::API::VULKAN)
 	{
-		const GraphicsBindingVulkan& graphicsBindingVulkan = m_CI.graphicsBindingVulkan;
+		vulkan::ContextRef context = ref_cast<vulkan::Context>(m_CI.context);
 		xrVulkanGraphicsBinding.type = XR_TYPE_GRAPHICS_BINDING_VULKAN_KHR;
 		xrVulkanGraphicsBinding.next = nullptr;
-		xrVulkanGraphicsBinding.instance = graphicsBindingVulkan.instance;
-		xrVulkanGraphicsBinding.physicalDevice = graphicsBindingVulkan.physicalDevice;
-		xrVulkanGraphicsBinding.device = graphicsBindingVulkan.device;
-		xrVulkanGraphicsBinding.queueFamilyIndex = graphicsBindingVulkan.queueFamilyIndex;
-		xrVulkanGraphicsBinding.queueIndex = graphicsBindingVulkan.queueIndex;
+		xrVulkanGraphicsBinding.instance = context->m_Instance;
+		xrVulkanGraphicsBinding.physicalDevice = context->m_PhysicalDevices.m_PDIs[context->m_PhysicalDeviceIndex].m_PhysicalDevice;
+		xrVulkanGraphicsBinding.device = context->m_Device;
+		xrVulkanGraphicsBinding.queueFamilyIndex = 0;
+		xrVulkanGraphicsBinding.queueIndex = 0;
 		m_SessionCI.next = &xrVulkanGraphicsBinding;
 	}
 #endif
@@ -87,66 +93,85 @@ void Session::RequestExit()
 	MIRU_XR_ASSERT(xrRequestExitSession(m_Session), "ERROR: OPENXR: Failed to request exit Session.");
 }
 
+void* Session::GetMIRUOpenXRData(InstanceRef instance, SystemRef system) 
+{
 #if defined(XR_USE_GRAPHICS_API_D3D12)
-XrGraphicsRequirementsD3D12KHR Session::GetGraphicsRequirementsD3D12(InstanceRef instance, SystemRef system) 
-{
-	PFN_xrGetD3D12GraphicsRequirementsKHR xrGetD3D12GraphicsRequirementsKHR = (PFN_xrGetD3D12GraphicsRequirementsKHR)GetInstanceProcAddr(instance->m_Instance, "xrGetD3D12GraphicsRequirementsKHR");
-	XrGraphicsRequirementsD3D12KHR graphicsRequirements = { XR_TYPE_GRAPHICS_REQUIREMENTS_D3D12_KHR };
-	MIRU_XR_ASSERT(xrGetD3D12GraphicsRequirementsKHR(instance->m_Instance, system->m_SystemID, &graphicsRequirements), "ERROR: OPENXR: Failed to get Graphics Requirements for D3D12.");
-	return graphicsRequirements;
-}
-#endif
+	if (instance->m_CI.api == base::GraphicsAPI::API::D3D12)
+	{
+		PFN_xrGetD3D12GraphicsRequirementsKHR xrGetD3D12GraphicsRequirementsKHR = (PFN_xrGetD3D12GraphicsRequirementsKHR)GetInstanceProcAddr(instance->m_Instance, "xrGetD3D12GraphicsRequirementsKHR");
+		XrGraphicsRequirementsD3D12KHR graphicsRequirements = { XR_TYPE_GRAPHICS_REQUIREMENTS_D3D12_KHR };
+		MIRU_XR_ASSERT(xrGetD3D12GraphicsRequirementsKHR(instance->m_Instance, system->m_SystemID, &graphicsRequirements), "ERROR: OPENXR: Failed to get Graphics Requirements for D3D12.");
 
+		openXRD3D12Data.type = base::Context::CreateInfoExtensionStructureTypes::OPENXR_D3D12_DATA;
+		openXRD3D12Data.pNext = nullptr;
+		openXRD3D12Data.adapterLuid = graphicsRequirements.adapterLuid;
+		openXRD3D12Data.minFeatureLevel = graphicsRequirements.minFeatureLevel;
+		return &openXRD3D12Data;
+	}
+#endif
 #if defined(XR_USE_GRAPHICS_API_VULKAN)
-XrGraphicsRequirementsVulkanKHR Session::GetGraphicsRequirementsVulkan(InstanceRef instance, SystemRef system)
-{
-	PFN_xrGetVulkanGraphicsRequirementsKHR xrGetVulkanGraphicsRequirementsKHR = (PFN_xrGetVulkanGraphicsRequirementsKHR)GetInstanceProcAddr(instance->m_Instance, "xrGetVulkanGraphicsRequirementsKHR");
-	XrGraphicsRequirementsVulkanKHR graphicsRequirements = { XR_TYPE_GRAPHICS_REQUIREMENTS_VULKAN_KHR };
-	MIRU_XR_ASSERT(xrGetVulkanGraphicsRequirementsKHR(instance->m_Instance, system->m_SystemID, &graphicsRequirements), "ERROR: OPENXR: Failed to get Graphics Requirements for Vulkan.");
-	return graphicsRequirements;
-}
-std::vector<std::string> Session::GetInstanceExtensionsVulkan(InstanceRef instance, SystemRef system)
-{
-	PFN_xrGetVulkanInstanceExtensionsKHR xrGetVulkanInstanceExtensionsKHR = (PFN_xrGetVulkanInstanceExtensionsKHR)GetInstanceProcAddr(instance->m_Instance, "xrGetVulkanInstanceExtensionsKHR");
+	if (instance->m_CI.api == base::GraphicsAPI::API::VULKAN)
+	{
+		PFN_xrGetVulkanGraphicsRequirementsKHR xrGetVulkanGraphicsRequirementsKHR = (PFN_xrGetVulkanGraphicsRequirementsKHR)GetInstanceProcAddr(instance->m_Instance, "xrGetVulkanGraphicsRequirementsKHR");
+		XrGraphicsRequirementsVulkanKHR graphicsRequirements = { XR_TYPE_GRAPHICS_REQUIREMENTS_VULKAN_KHR };
+		MIRU_XR_ASSERT(xrGetVulkanGraphicsRequirementsKHR(instance->m_Instance, system->m_SystemID, &graphicsRequirements), "ERROR: OPENXR: Failed to get Graphics Requirements for Vulkan.");
 
-	uint32_t extensionNamesSize = 0;
-	MIRU_XR_ASSERT(xrGetVulkanInstanceExtensionsKHR(instance->m_Instance, system->m_SystemID, 0, &extensionNamesSize, nullptr), "ERROR: OPENXR: Failed to get Vulkan Instance Extensions.");
+		auto GetInstanceExtensionsVulkan = [&](InstanceRef instance, SystemRef system) -> std::vector<std::string>
+		{
+			PFN_xrGetVulkanInstanceExtensionsKHR xrGetVulkanInstanceExtensionsKHR = (PFN_xrGetVulkanInstanceExtensionsKHR)GetInstanceProcAddr(instance->m_Instance, "xrGetVulkanInstanceExtensionsKHR");
 
-	std::vector<char> extensionNames(extensionNamesSize);
-	MIRU_XR_ASSERT(xrGetVulkanInstanceExtensionsKHR(instance->m_Instance, system->m_SystemID, extensionNamesSize, &extensionNamesSize, extensionNames.data()), "ERROR: OPENXR: Failed to get Vulkan Instance Extensions.");
+			uint32_t extensionNamesSize = 0;
+			MIRU_XR_ASSERT(xrGetVulkanInstanceExtensionsKHR(instance->m_Instance, system->m_SystemID, 0, &extensionNamesSize, nullptr), "ERROR: OPENXR: Failed to get Vulkan Instance Extensions.");
 
-	std::stringstream streamData(extensionNames.data());
-	std::vector<std::string> extensions;
-	std::string extension;
-	while (std::getline(streamData, extension, ' ')) {
-		extensions.push_back(extension);
+			std::vector<char> extensionNames(extensionNamesSize);
+			MIRU_XR_ASSERT(xrGetVulkanInstanceExtensionsKHR(instance->m_Instance, system->m_SystemID, extensionNamesSize, &extensionNamesSize, extensionNames.data()), "ERROR: OPENXR: Failed to get Vulkan Instance Extensions.");
+
+			std::stringstream streamData(extensionNames.data());
+			std::vector<std::string> extensions;
+			std::string extension;
+			while (std::getline(streamData, extension, ' ')) {
+				extensions.push_back(extension);
+			}
+			return extensions;
+		};
+
+		auto GetDeviceExtensionsVulkan = [&](InstanceRef instance, SystemRef system) -> std::vector<std::string>
+		{
+			PFN_xrGetVulkanDeviceExtensionsKHR xrGetVulkanDeviceExtensionsKHR = (PFN_xrGetVulkanDeviceExtensionsKHR)GetInstanceProcAddr(instance->m_Instance, "xrGetVulkanDeviceExtensionsKHR");
+
+			uint32_t extensionNamesSize = 0;
+			MIRU_XR_ASSERT(xrGetVulkanDeviceExtensionsKHR(instance->m_Instance, system->m_SystemID, 0, &extensionNamesSize, nullptr), "ERROR: OPENXR: Failed to get Vulkan Device Extensions.");
+
+			std::vector<char> extensionNames(extensionNamesSize);
+			MIRU_XR_ASSERT(xrGetVulkanDeviceExtensionsKHR(instance->m_Instance, system->m_SystemID, extensionNamesSize, &extensionNamesSize, extensionNames.data()), "ERROR: OPENXR: Failed to get Vulkan Device Extensions.");
+
+			std::stringstream streamData(extensionNames.data());
+			std::vector<std::string> extensions;
+			std::string extension;
+			while (std::getline(streamData, extension, ' ')) {
+				extensions.push_back(extension);
+			}
+			return extensions;
+		};
+
+		openXRVulkanData.type = base::Context::CreateInfoExtensionStructureTypes::OPENXR_VULKAN_DATA;
+		openXRVulkanData.pNext = nullptr;
+		openXRVulkanData.minApiVersionMajorSupported = XR_VERSION_MAJOR(graphicsRequirements.minApiVersionSupported);
+		openXRVulkanData.minApiVersionMinorSupported = XR_VERSION_MINOR(graphicsRequirements.minApiVersionSupported);
+		openXRVulkanData.maxApiVersionMajorSupported = XR_VERSION_MAJOR(graphicsRequirements.maxApiVersionSupported);
+		openXRVulkanData.maxApiVersionMinorSupported = XR_VERSION_MINOR(graphicsRequirements.maxApiVersionSupported);
+		openXRVulkanData.instanceExtensions = GetInstanceExtensionsVulkan(instance, system);
+		openXRVulkanData.deviceExtensions = GetDeviceExtensionsVulkan(instance, system);
+		openXRVulkanData.getPhysicalDeviceVulkan = [&](VkInstance vkInstance) -> VkPhysicalDevice 
+		{
+			PFN_xrGetVulkanGraphicsDeviceKHR xrGetVulkanGraphicsDeviceKHR = (PFN_xrGetVulkanGraphicsDeviceKHR)GetInstanceProcAddr(instance->m_Instance, "xrGetVulkanGraphicsDeviceKHR");
+
+			VkPhysicalDevice physicalDevice;
+			MIRU_XR_ASSERT(xrGetVulkanGraphicsDeviceKHR(instance->m_Instance, system->m_SystemID, vkInstance, &physicalDevice), "ERROR: OPENXR: Failed to get Graphics Device for Vulkan.");
+			return physicalDevice; 
+		};
+		return &openXRVulkanData;
 	}
-	return extensions;
-}
-std::vector<std::string> Session::GetDeviceExtensionsVulkan(InstanceRef instance, SystemRef system)
-{
-	PFN_xrGetVulkanDeviceExtensionsKHR xrGetVulkanDeviceExtensionsKHR = (PFN_xrGetVulkanDeviceExtensionsKHR)GetInstanceProcAddr(instance->m_Instance, "xrGetVulkanDeviceExtensionsKHR");
-
-	uint32_t extensionNamesSize = 0;
-	MIRU_XR_ASSERT(xrGetVulkanDeviceExtensionsKHR(instance->m_Instance, system->m_SystemID, 0, &extensionNamesSize, nullptr), "ERROR: OPENXR: Failed to get Vulkan Device Extensions.");
-
-	std::vector<char> extensionNames(extensionNamesSize);
-	MIRU_XR_ASSERT(xrGetVulkanDeviceExtensionsKHR(instance->m_Instance, system->m_SystemID, extensionNamesSize, &extensionNamesSize, extensionNames.data()), "ERROR: OPENXR: Failed to get Vulkan Device Extensions.");
-
-	std::stringstream streamData(extensionNames.data());
-	std::vector<std::string> extensions;
-	std::string extension;
-	while (std::getline(streamData, extension, ' ')) {
-		extensions.push_back(extension);
-	}
-	return extensions;
-}
-VkPhysicalDevice Session::GetPhysicalDeviceVulkan(VkInstance vkInstance, InstanceRef instance, SystemRef system)
-{
-	PFN_xrGetVulkanGraphicsDeviceKHR xrGetVulkanGraphicsDeviceKHR = (PFN_xrGetVulkanGraphicsDeviceKHR)GetInstanceProcAddr(instance->m_Instance, "xrGetVulkanGraphicsDeviceKHR");
-	
-	VkPhysicalDevice physicalDevice;
-	MIRU_XR_ASSERT(xrGetVulkanGraphicsDeviceKHR(instance->m_Instance, system->m_SystemID, vkInstance, &physicalDevice), "ERROR: OPENXR: Failed to get Graphics Device for Vulkan.");
-	return physicalDevice;
-}
 #endif
+	return nullptr;
+}

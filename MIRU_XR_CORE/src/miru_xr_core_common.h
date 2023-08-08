@@ -10,39 +10,9 @@
 #include <map>
 #include <functional>
 
-//GRAPHICS API
-#if !defined(MIRU_XR_D3D12) && !defined(MIRU_XR_VULKAN)
-
-#if defined(_WIN64)
-#define MIRU_XR_D3D12
-#define MIRU_XR_VULKAN
-#if defined(MIRU_WIN64_UWP)
-#undef MIRU_XR_VULKAN
-#define ARC_WIN64_UWP
-#undef WINAPI_FAMILY
-#define WINAPI_FAMILY WINAPI_FAMILY_PC_APP
-#endif
-#elif defined(__APPLE__)
-#define MIRU_METAL //Use Metal?
-#elif defined(__linux__) && !defined(__ANDROID__)
-#define MIRU_XR_VULKAN
-#elif defined (__ANDROID__) && (__ANDROID_API__ >= 24)
-#define MIRU_XR_VULKAN
-#endif
-
-#endif
-
-#if defined(MIRU_XR_D3D12)
-#include "d3d12.h"
-#endif
-#if defined(MIRU_XR_VULKAN)
-#if defined(_WIN64)
-#define VK_USE_PLATFORM_WIN32_KHR
-#elif defined(__ANDROID__)
-#define VK_USE_PLATFORM_ANDROID_KHR
-#endif
-#include "vulkan/vulkan.h"
-#endif
+//MIRU
+#include "miru_core_common.h"
+#include "miru_core.h"
 
 //OpenXR
 #if defined(_WIN64)
@@ -57,10 +27,10 @@
 #define XR_USE_PLATFORM_ANDROID
 #endif
 
-#if defined(MIRU_XR_D3D12)
+#if defined(MIRU_D3D12)
 #define XR_USE_GRAPHICS_API_D3D12
 #endif
-#if defined(MIRU_XR_VULKAN)
+#if defined(MIRU_VULKAN)
 #define XR_USE_GRAPHICS_API_VULKAN
 #endif
 

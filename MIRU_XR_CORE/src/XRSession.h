@@ -6,38 +6,15 @@ namespace miru
 {
 	namespace xr
 	{
-
-	#if defined(MIRU_XR_D3D12)
-		struct GraphicsBindingD3D12
-		{
-			ID3D12Device*		device;
-			ID3D12CommandQueue* queue;
-		};
-	#endif
-	#if defined(MIRU_XR_VULKAN)
-		struct GraphicsBindingVulkan
-		{
-			VkInstance			instance;
-			VkPhysicalDevice	physicalDevice;
-			VkDevice			device;
-			uint32_t			queueFamilyIndex;
-			uint32_t			queueIndex;
-		};
-	#endif
-
 		class MIRU_XR_API Session final
 		{			
 			//enums/structs
 		public:
 			struct CreateInfo
 			{
-				InstanceRef instance;
-				SystemRef	system;
-				union
-				{
-					GraphicsBindingD3D12 graphicsBindingD3D12;
-					GraphicsBindingVulkan graphicsBindingVulkan;
-				};
+				InstanceRef			instance;
+				SystemRef			system;
+				base::ContextRef	context;
 			};
 			enum class State
 			{
@@ -64,15 +41,7 @@ namespace miru
 			void RequestExit();
 
 		public:
-		#if defined(MIRU_XR_D3D12)
-			static XrGraphicsRequirementsD3D12KHR GetGraphicsRequirementsD3D12(InstanceRef instance, SystemRef system);
-		#endif
-		#if defined(MIRU_XR_VULKAN)
-			static XrGraphicsRequirementsVulkanKHR GetGraphicsRequirementsVulkan(InstanceRef instance, SystemRef system);
-			static std::vector<std::string> GetInstanceExtensionsVulkan(InstanceRef instance, SystemRef system);
-			static std::vector<std::string> GetDeviceExtensionsVulkan(InstanceRef instance, SystemRef system);
-			static VkPhysicalDevice GetPhysicalDeviceVulkan(VkInstance vkInstance, InstanceRef instance, SystemRef system);
-		#endif
+			static void* GetMIRUOpenXRData(InstanceRef instance, SystemRef system);
 
 		public:
 			inline void SetViewConfigurationsType(ViewConfigurations::Type type) { m_Type = type; };

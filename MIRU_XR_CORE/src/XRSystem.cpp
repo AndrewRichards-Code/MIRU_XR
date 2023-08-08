@@ -27,25 +27,3 @@ System::System(CreateInfo* pCreateInfo)
 System::~System()
 {
 }
-
-#if defined(XR_USE_GRAPHICS_API_D3D12)
-XrGraphicsRequirementsD3D12KHR System::GetD3D12GraphicsRequirements()
-{
-	XrGraphicsRequirementsD3D12KHR graphicsRequirements;
-	PFN_xrGetD3D12GraphicsRequirementsKHR xrGetD3D12GraphicsRequirementsKHR;
-	MIRU_XR_ASSERT(xrGetInstanceProcAddr(m_CI.instance->m_Instance, "xrGetD3D12GraphicsRequirementsKHR", (PFN_xrVoidFunction*)&xrGetD3D12GraphicsRequirementsKHR), "ERROR: OPENXR: Failed to get InstanceProcAddr.");
-	MIRU_XR_ASSERT(xrGetD3D12GraphicsRequirementsKHR(m_CI.instance->m_Instance, m_SystemID, &graphicsRequirements), "ERROR: OPENXR: Failed to get D3D12GraphicsRequirements.");
-	return graphicsRequirements;
-}
-#endif
-
-#if defined(XR_USE_GRAPHICS_API_VULKAN)
-XrGraphicsRequirementsVulkanKHR System::GetVulkanGraphicsRequirements()
-{
-	XrGraphicsRequirementsVulkanKHR graphicsRequirements;
-	PFN_xrGetVulkanGraphicsRequirementsKHR xrGetVulkanGraphicsRequirementsKHR;
-	MIRU_XR_ASSERT(xrGetInstanceProcAddr(m_CI.instance->m_Instance, "xrGetVulkanGraphicsRequirementsKHR", (PFN_xrVoidFunction*)&xrGetVulkanGraphicsRequirementsKHR), "ERROR: OPENXR: Failed to get InstanceProcAddr.");
-	MIRU_XR_ASSERT(xrGetVulkanGraphicsRequirementsKHR(m_CI.instance->m_Instance, m_SystemID, &graphicsRequirements), "ERROR: OPENXR: Failed to get D3D12GraphicsRequirements.");
-	return graphicsRequirements;
-}
-#endif

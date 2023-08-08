@@ -22,15 +22,15 @@ namespace miru
 			};
 			struct CreateInfo
 			{
-				SessionRef	session;
-				Usage		usage;
-				int64_t		format; //Either DXGI_FORMAT or VkFormat.
-				uint32_t	sampleCount;
-				uint32_t	width;
-				uint32_t	height;
-				uint32_t	faceCount;
-				uint32_t	arraySize;
-				uint32_t	mipCount;
+				SessionRef			session;
+				Usage				usage;
+				base::Image::Format format;
+				uint32_t			sampleCount;
+				uint32_t			width;
+				uint32_t			height;
+				uint32_t			faceCount;
+				uint32_t			arraySize;
+				uint32_t			mipCount;
 			};
 			typedef void* Image;
 
@@ -57,10 +57,10 @@ namespace miru
 			XrSwapchainCreateInfo m_SwapchainCI;
 
 			uint32_t m_ImageCount = 0;
-		#if defined(MIRU_XR_D3D12)
+		#if defined(MIRU_D3D12)
 			std::vector<XrSwapchainImageD3D12KHR> m_SwapchainImagesD3D12;
 		#endif
-		#if defined(MIRU_XR_VULKAN)
+		#if defined(MIRU_VULKAN)
 			std::vector<XrSwapchainImageVulkanKHR> m_SwapchainImagesVulkan;
 		#endif
 
