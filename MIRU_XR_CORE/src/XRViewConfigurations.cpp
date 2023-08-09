@@ -30,9 +30,7 @@ ViewConfigurations::ViewConfigurations(CreateInfo* pCreateInfo)
 		std::vector<XrViewConfigurationView> viewConfigurationViews = {};
 		uint32_t viewConfigurationViewCount = 0;
 		MIRU_XR_ASSERT(xrEnumerateViewConfigurationViews(instance, systemID, static_cast<XrViewConfigurationType>(type), 0, &viewConfigurationViewCount, nullptr), "ERROR: OPENXR: Failed to enumerate ViewConfigurationViews.");
-		viewConfigurationViews.resize(viewConfigurationViewCount);
-		for (auto& viewConfigurationView : viewConfigurationViews)
-			viewConfigurationView.type = XR_TYPE_VIEW_CONFIGURATION_VIEW;
+		viewConfigurationViews.resize(viewConfigurationViewCount, { XR_TYPE_VIEW_CONFIGURATION_VIEW });
 		MIRU_XR_ASSERT(xrEnumerateViewConfigurationViews(instance, systemID, static_cast<XrViewConfigurationType>(type), viewConfigurationViewCount, &viewConfigurationViewCount, viewConfigurationViews.data()), "ERROR: OPENXR: Failed to enumerate ViewConfigurationViews.");
 		std::vector<View>& views = m_Views[type];
 		views.reserve(viewConfigurationViewCount);

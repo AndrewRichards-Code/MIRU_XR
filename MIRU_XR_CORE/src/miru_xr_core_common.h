@@ -14,6 +14,9 @@
 #include "miru_core_common.h"
 #include "miru_core.h"
 
+//MARS
+#include "mars.h"
+
 //OpenXR
 #if defined(_WIN64)
 #define XR_USE_PLATFORM_WIN32
@@ -58,12 +61,18 @@ namespace miru::xr
 {
 	MIRU_XR_FORWARD_DECLARE_CLASS_AND_REF(Action);
 	MIRU_XR_FORWARD_DECLARE_CLASS_AND_REF(ActionSet);
+	MIRU_XR_FORWARD_DECLARE_CLASS_AND_REF(ActionSpace);
 	MIRU_XR_FORWARD_DECLARE_CLASS_AND_REF(Instance);
+	MIRU_XR_FORWARD_DECLARE_CLASS_AND_REF(ReferenceSpace);
 	MIRU_XR_FORWARD_DECLARE_CLASS_AND_REF(Session);
+	MIRU_XR_FORWARD_DECLARE_CLASS_AND_REF(Space);
 	MIRU_XR_FORWARD_DECLARE_CLASS_AND_REF(Swapchain);
 	MIRU_XR_FORWARD_DECLARE_CLASS_AND_REF(System);
 	MIRU_XR_FORWARD_DECLARE_CLASS_AND_REF(ViewConfigurations);
+
+	typedef XrPath Path;
 }
+
 
 //MIRU_XR Enum Class Bitwise Operators Templates
 #define MIRU_ENUM_CLASS_BITWISE_OPERATORS

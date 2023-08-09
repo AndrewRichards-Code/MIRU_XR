@@ -32,9 +32,7 @@ Instance::Instance(CreateInfo* pCreateInfo)
 	uint32_t apiLayerCount = 0;
 	std::vector<XrApiLayerProperties> apiLayerProperties;
 	MIRU_XR_ASSERT(xrEnumerateApiLayerProperties(0, &apiLayerCount, nullptr), "ERROR: OPENXR: Failed to enumerate ApiLayerProperties.");
-	apiLayerProperties.resize(apiLayerCount);
-	for (auto& apiLayerProperty : apiLayerProperties)
-		apiLayerProperty.type = XR_TYPE_API_LAYER_PROPERTIES;
+	apiLayerProperties.resize(apiLayerCount, { XR_TYPE_API_LAYER_PROPERTIES });
 	MIRU_XR_ASSERT(xrEnumerateApiLayerProperties(apiLayerCount, &apiLayerCount, apiLayerProperties.data()), "ERROR: OPENXR: Failed to enumerate ApiLayerProperties.");
 	for (auto& requestLayer : m_APILayers)
 	{
@@ -49,9 +47,7 @@ Instance::Instance(CreateInfo* pCreateInfo)
 	uint32_t extensionCount = 0;
 	std::vector<XrExtensionProperties> extensionProperties;
 	MIRU_XR_ASSERT(xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr), "ERROR: OPENXR: Failed to enumerate InstanceExtensionProperties.");
-	extensionProperties.resize(extensionCount);
-	for (auto& extensionProperty : extensionProperties)
-		extensionProperty.type = XR_TYPE_EXTENSION_PROPERTIES;
+	extensionProperties.resize(extensionCount, { XR_TYPE_EXTENSION_PROPERTIES });
 	MIRU_XR_ASSERT(xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, extensionProperties.data()), "ERROR: OPENXR: Failed to enumerate InstanceExtensionProperties.");
 	for (auto& requestExtension : m_InstanceExtensions)
 	{
@@ -79,7 +75,7 @@ Instance::Instance(CreateInfo* pCreateInfo)
 	{
 		m_DebugUtilsMessengerCI.type = XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		m_DebugUtilsMessengerCI.next = nullptr;
-		m_DebugUtilsMessengerCI.messageSeverities = /*XR_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |*/ XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		m_DebugUtilsMessengerCI.messageSeverities = XR_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 		m_DebugUtilsMessengerCI.messageTypes = XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | XR_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | XR_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 		m_DebugUtilsMessengerCI.userCallback = MessageCallbackFunction;
 		m_DebugUtilsMessengerCI.userData = this;
@@ -108,20 +104,20 @@ Instance::~Instance()
 	MIRU_XR_ASSERT(xrDestroyInstance(m_Instance), "ERROR: OPENXR: Failed to destroy Instance.");
 }
 
-XrPath Instance::GetPath(const std::string& path)
+Path Instance::GetPath(const std::string& path)
 {
 	XrPath xrPath;
-	MIRU_XR_ASSERT(xrStringToPath(m_Instance, path.c_str(), &xrPath), "ERROR: OPENXR: Failed to convert std::string to XrPath.");
+	MIRU_XR_ASSERT(xrStringToPath(m_Instance, path.c_str(), &xrPath), "ERROR: OPENXR: Failed to convert std::string to Path.");
 	return xrPath;
 }
 
-std::string Instance::GetString(const XrPath& xrPath)
+std::string Instance::GetString(const Path& xrPath)
 {
 	std::string path;
 	uint32_t stringLength = 0;
-	MIRU_XR_ASSERT(xrPathToString(m_Instance, xrPath, 0, &stringLength, nullptr), "ERROR: OPENXR: Failed to convert XrPath to std::string.");
+	MIRU_XR_ASSERT(xrPathToString(m_Instance, xrPath, 0, &stringLength, nullptr), "ERROR: OPENXR: Failed to convert Path to std::string.");
 	path.resize(stringLength);
-	MIRU_XR_ASSERT(xrPathToString(m_Instance, xrPath, stringLength, &stringLength, path.data()), "ERROR: OPENXR: Failed to convert XrPath to std::string.");
+	MIRU_XR_ASSERT(xrPathToString(m_Instance, xrPath, stringLength, &stringLength, path.data()), "ERROR: OPENXR: Failed to convert Path to std::string.");
 	return path;
 }
 
@@ -205,8 +201,11 @@ XrBool32 Instance::MessageCallbackFunction(XrDebugUtilsMessageSeverityFlagsEXT m
 	std::stringstream errorMessage;
 	errorMessage << pCallbackData->functionName << "(" << messageSeverityStr << " / " << messageTypeStr << "): msgNum: " << pCallbackData->messageId << " - " << pCallbackData->message;
 	std::string errorMessageStr = errorMessage.str();
-
-	MIRU_XR_ASSERT(true, errorMessageStr.c_str());
+	
+	if (arc::BitwiseCheck(messageSeverity, XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT))
+	{
+		MIRU_XR_ASSERT(true, errorMessageStr.c_str());
+	}
 	return XrBool32();
 }
 

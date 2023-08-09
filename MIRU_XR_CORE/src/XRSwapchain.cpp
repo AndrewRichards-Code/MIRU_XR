@@ -81,7 +81,7 @@ void Swapchain::Wait(int64_t timeout_ns)
 
 void Swapchain::Release()
 {
-	m_SwapchianImageRI.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO;
+	m_SwapchianImageRI.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO;
 	m_SwapchianImageRI.next = nullptr;
 	MIRU_XR_ASSERT(xrReleaseSwapchainImage(m_Swapchain, &m_SwapchianImageRI), "ERROR: OPENXR: Failed to release SwapchainImage.");
 }

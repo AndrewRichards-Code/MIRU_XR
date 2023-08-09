@@ -32,8 +32,8 @@ namespace miru
 			Instance(CreateInfo* pCreateInfo);
 			~Instance();
 
-			XrPath GetPath(const std::string& path);
-			std::string GetString(const XrPath& xrPath);
+			Path GetPath(const std::string& path);
+			std::string GetString(const Path& xrPath);
 
 			static bool IsActive(std::vector<const char*> list, const char* name);
 
