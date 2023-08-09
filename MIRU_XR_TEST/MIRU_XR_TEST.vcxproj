@@ -57,7 +57,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\MIRU\External;$(ProjectDir)..\..\MIRU\MIRU_CORE\src;$(ProjectDir)..\MIRU_XR_CORE\src;$(ProjectDir)..\External\OpenXR\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\MARS\src;$(ProjectDir)..\..\MIRU\External;$(ProjectDir)..\..\MIRU\MIRU_CORE\src;$(ProjectDir)..\MIRU_XR_CORE\src;$(ProjectDir)..\External\OpenXR\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -78,7 +78,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\MIRU\External;$(ProjectDir)..\..\MIRU\MIRU_CORE\src;$(ProjectDir)..\MIRU_XR_CORE\src;$(ProjectDir)..\External\OpenXR\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\MARS\src;$(ProjectDir)..\..\MIRU\External;$(ProjectDir)..\..\MIRU\MIRU_CORE\src;$(ProjectDir)..\MIRU_XR_CORE\src;$(ProjectDir)..\External\OpenXR\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>

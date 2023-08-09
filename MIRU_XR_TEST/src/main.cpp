@@ -13,6 +13,7 @@ int main()
 	instanceCI.api = GraphicsAPI::GetAPI();
 	InstanceRef instance = CreateRef<Instance>(&instanceCI);
 
+
 	System::CreateInfo systemCI;
 	systemCI.instance = instance;
 	systemCI.formFactor = System::FormFactor::HEAD_MOUNTED_DISPLAY;
@@ -38,7 +39,9 @@ int main()
 	ViewConfigurationsRef viewConfigurations = CreateRef<ViewConfigurations>(&viewConfigurationsCI);
 
 	const ViewConfigurations::Type& viewConfigurationType = viewConfigurations->m_Types[0];
+	const ViewConfigurations::EnvironmentBlendMode& environmentBlendMode = viewConfigurations->m_EnvironmentBlendModes[viewConfigurationType][0];
 	session->SetViewConfigurationsType(viewConfigurationType);
+	session->SetViewConfigurationsEnvironmentBlendMode(environmentBlendMode);
 
 	xr::Swapchain::CreateInfo swapchainCI;
 	swapchainCI.session = session;
@@ -85,6 +88,36 @@ int main()
 		swapchainImageViews[i] = ImageView::Create(&swapchainImageViewCI);
 	}
 
+	ReferenceSpace::CreateInfo referenceSpaceCI;
+	referenceSpaceCI.session = session;
+	referenceSpaceCI.type = ReferenceSpace::Type::VIEW;
+	referenceSpaceCI.pose.orientation = { 1.0, 0.0, 0.0, 0.0 };
+	referenceSpaceCI.pose.position = {0.0f, 0.0f, 0.0f };
+	ReferenceSpaceRef referenceSpace = CreateRef<ReferenceSpace>(&referenceSpaceCI);
+
+	CommandPool::CreateInfo cmdPoolCI;
+	cmdPoolCI.debugName = "CmdPool";
+	cmdPoolCI.context = context;
+	cmdPoolCI.flags = CommandPool::FlagBit::RESET_COMMAND_BUFFER_BIT;
+	cmdPoolCI.queueType = CommandPool::QueueType::GRAPHICS;
+	CommandPoolRef cmdPool = CommandPool::Create(&cmdPoolCI);
+
+	CommandBuffer::CreateInfo cmdBufferCI;
+	cmdBufferCI.debugName = "CmdBuffer";
+	cmdBufferCI.commandPool = cmdPool;
+	cmdBufferCI.level = CommandBuffer::Level::PRIMARY;
+	cmdBufferCI.commandBufferCount = swapchain->GetImageCount();
+	CommandBufferRef cmdBuffer = CommandBuffer::Create(&cmdBufferCI);
+
+	Fence::CreateInfo fenceCI;
+	fenceCI.debugName = "DrawFence";
+	fenceCI.device = context->GetDevice();
+	fenceCI.signaled = true;
+	fenceCI.timeout = UINT64_MAX;
+	std::vector<FenceRef> draws;
+	for (uint32_t i = 0; i < swapchain->GetImageCount(); i++)
+		draws.push_back(Fence::Create(&fenceCI));
+
 	bool applicationRunning = true;
 	while (applicationRunning)
 	{
@@ -104,5 +137,75 @@ int main()
 				if (sessionStateChanged->state == (XrSessionState)Session::State::EXITING)
 					applicationRunning = false;
 			});
+
+		if (session->IsRunning())
+		{
+			session->WaitFrame();
+			session->BeginFrame();
+
+			std::vector<XrCompositionLayerBaseHeader*> layers;
+			XrCompositionLayerProjection layerProjection;
+			std::vector<XrCompositionLayerProjectionView> layerProjectionViews;
+
+			if (session->IsActive() && session->m_FrameState.shouldRender)
+			{
+				std::vector<View> views;
+				if (session->LocateViews(referenceSpace, views))
+				{
+					const uint32_t& width = viewConfigurations->m_Views[viewConfigurationType][0].recommendedImageRectWidth;
+					const uint32_t& height = viewConfigurations->m_Views[viewConfigurationType][0].recommendedImageRectHeight;
+
+					layerProjectionViews.resize(views.size());
+					size_t i = 0;
+					for (const auto& view : views)
+					{
+						layerProjectionViews[i].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+						layerProjectionViews[i].next = nullptr;
+						layerProjectionViews[i].pose = views[i].pose;
+						layerProjectionViews[i].fov = views[i].fov;
+						layerProjectionViews[i].subImage.swapchain = swapchain->m_Swapchain;
+						layerProjectionViews[i].subImage.imageRect.offset.x = 0;
+						layerProjectionViews[i].subImage.imageRect.offset.y = 0;
+						layerProjectionViews[i].subImage.imageRect.extent.width = static_cast<int32_t>(width);
+						layerProjectionViews[i].subImage.imageRect.extent.height = static_cast<int32_t>(height);
+						layerProjectionViews[i].subImage.imageArrayIndex = static_cast<uint32_t>(i);
+						i++;
+					}
+
+					layerProjection.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
+					layerProjection.next = nullptr;
+					layerProjection.layerFlags = XR_COMPOSITION_LAYER_CORRECT_CHROMATIC_ABERRATION_BIT | XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+					layerProjection.space = referenceSpace->m_Space;
+					layerProjection.viewCount = static_cast<uint32_t>(layerProjectionViews.size());
+					layerProjection.views = layerProjectionViews.data();
+
+					swapchain->Acquire();
+					swapchain->Wait(XR_INFINITE_DURATION);
+					uint32_t imageIndex = swapchain->GetImageIndex();
+
+					//Render Stuff
+					{
+						draws[imageIndex]->Wait();
+						draws[imageIndex]->Reset();
+
+						cmdBuffer->Reset(imageIndex, false);
+						cmdBuffer->Begin(imageIndex, CommandBuffer::UsageBit::SIMULTANEOUS);
+
+						cmdBuffer->ClearColourImage(imageIndex, swapchainImages[imageIndex], Image::Layout::COLOUR_ATTACHMENT_OPTIMAL, { 1.0f, 0.0f, 0.0f, 1.0f }, { { Image::AspectBit::COLOUR_BIT, 0, 1, 0, 2 } });
+
+						cmdBuffer->End(imageIndex);
+
+						CommandBuffer::SubmitInfo mainSI = { { imageIndex }, {}, {}, {}, {}, {} };
+						cmdBuffer->Submit({ mainSI }, draws[imageIndex]);
+					}
+
+					swapchain->Release();
+
+					layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&layerProjection));
+				}
+			}
+
+			session->EndFrame(layers);
+		}
 	}
 }

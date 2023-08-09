@@ -1,6 +1,7 @@
 #include "miru_xr_core_common.h"
 #include "XRSession.h"
 #include "XRInstance.h"
+#include "XRSpace.h"
 #include "XRSystem.h"
 
 #include "d3d12/D3D12Context.h"
@@ -91,6 +92,87 @@ void Session::End()
 void Session::RequestExit()
 {
 	MIRU_XR_ASSERT(xrRequestExitSession(m_Session), "ERROR: OPENXR: Failed to request exit Session.");
+}
+
+bool Session::IsActive()
+{
+	return (m_State == State::SYNCHRONIZED || m_State == State::VISIBLE || m_State == State::FOCUSED);
+}
+
+void Session::WaitFrame()
+{
+	m_FrameState.type = XR_TYPE_FRAME_STATE;
+	m_FrameState.next =  nullptr;
+	m_FrameState.predictedDisplayTime = 0;
+	m_FrameState.predictedDisplayPeriod = 0;
+	m_FrameState.shouldRender = false;
+
+	XrFrameWaitInfo frameWaitInfo;
+	frameWaitInfo.type = XR_TYPE_FRAME_WAIT_INFO;
+	frameWaitInfo.next = nullptr;
+	MIRU_XR_ASSERT(xrWaitFrame(m_Session, &frameWaitInfo, &m_FrameState), "ERROR: OPENXR: Failed to wait for XR Frame.");
+}
+
+void Session::BeginFrame()
+{
+	XrFrameBeginInfo frameBeginInfo;
+	frameBeginInfo.type = XR_TYPE_FRAME_BEGIN_INFO;
+	frameBeginInfo.next = nullptr;
+	MIRU_XR_ASSERT(xrBeginFrame(m_Session, &frameBeginInfo), "ERROR: OPENXR: Failed to begin the XR Frame.");
+}
+
+void Session::EndFrame(const std::vector<XrCompositionLayerBaseHeader*>& layers)
+{
+	XrFrameEndInfo frameEndInfo;
+	frameEndInfo.type = XR_TYPE_FRAME_END_INFO;
+	frameEndInfo.next = nullptr;
+	frameEndInfo.displayTime = m_FrameState.predictedDisplayTime;
+	frameEndInfo.environmentBlendMode = static_cast<XrEnvironmentBlendMode>(m_EnvironmentBlendMode);
+	frameEndInfo.layerCount = static_cast<uint32_t>(layers.size());
+	frameEndInfo.layers = layers.data();
+	MIRU_XR_ASSERT(xrEndFrame(m_Session, &frameEndInfo), "ERROR: OPENXR: Failed to end the XR Frame.");
+}
+
+bool Session::LocateViews(SpaceRef space, std::vector<View>& views)
+{
+	XrViewState viewState;
+	viewState.type = XR_TYPE_VIEW_STATE;
+	viewState.next = nullptr;
+	viewState.viewStateFlags = 0;
+
+	XrViewLocateInfo viewLocateInfo;
+	viewLocateInfo.type = XR_TYPE_VIEW_LOCATE_INFO;
+	viewLocateInfo.next = nullptr;
+	viewLocateInfo.viewConfigurationType = static_cast<XrViewConfigurationType>(m_Type);
+	viewLocateInfo.displayTime = m_FrameState.predictedDisplayTime;
+	viewLocateInfo.space = space->m_Space;
+	uint32_t viewCount = 0;
+
+	XrResult result = xrLocateViews(m_Session, &viewLocateInfo, &viewState, 0, &viewCount, nullptr);
+	if (result != XR_SUCCESS) 
+	{
+		std::cout << "ERROR: OPENXR: Failed to locate Views." << std::endl;
+		return false;
+	}
+
+	std::vector<XrView> xrViews(viewCount, { XR_TYPE_VIEW });
+
+	result = xrLocateViews(m_Session, &viewLocateInfo, &viewState, static_cast<uint32_t>(xrViews.size()), &viewCount, xrViews.data());
+	if (result != XR_SUCCESS)
+	{
+		std::cout << "ERROR: OPENXR: Failed to locate Views." << std::endl;
+		return false;
+	}
+
+	for (const auto& xrView : xrViews)
+	{
+		View view;
+		view.pose = xrView.pose;
+		view.fov = xrView.fov;
+		views.push_back(view);
+	}
+
+	return true;
 }
 
 void* Session::GetMIRUOpenXRData(InstanceRef instance, SystemRef system) 

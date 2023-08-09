@@ -58,7 +58,7 @@
       <PreprocessorDefinitions>MIRU_D3D12;MIRU_VULKAN;MIRU_XR_BUILD_DLL;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\MIRU\External;$(ProjectDir)..\..\MIRU\MIRU_CORE\src;$(ProjectDir)src;$(ProjectDir)..\External\OpenXR\include;$(VULKAN_SDK)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\MARS\src;$(ProjectDir)..\..\MIRU\External;$(ProjectDir)..\..\MIRU\MIRU_CORE\src;$(ProjectDir)src;$(ProjectDir)..\External\OpenXR\include;$(VULKAN_SDK)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>miru_xr_core_common.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -78,7 +78,7 @@
       <PreprocessorDefinitions>MIRU_D3D12;MIRU_VULKAN;MIRU_XR_BUILD_DLL;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\MIRU\External;$(ProjectDir)..\..\MIRU\MIRU_CORE\src;$(ProjectDir)src;$(ProjectDir)..\External\OpenXR\include;$(VULKAN_SDK)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\MARS\src;$(ProjectDir)..\..\MIRU\External;$(ProjectDir)..\..\MIRU\MIRU_CORE\src;$(ProjectDir)src;$(ProjectDir)..\External\OpenXR\include;$(VULKAN_SDK)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>miru_xr_core_common.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -99,6 +99,7 @@
     <ClCompile Include="src\XRActions.cpp" />
     <ClCompile Include="src\XRInstance.cpp" />
     <ClCompile Include="src\XRSession.cpp" />
+    <ClCompile Include="src\XRSpace.cpp" />
     <ClCompile Include="src\XRSwapchain.cpp" />
     <ClCompile Include="src\XRSystem.cpp" />
     <ClCompile Include="src\XRViewConfigurations.cpp" />
@@ -109,6 +110,7 @@
     <ClInclude Include="src\XRActions.h" />
     <ClInclude Include="src\XRInstance.h" />
     <ClInclude Include="src\XRSession.h" />
+    <ClInclude Include="src\XRSpace.h" />
     <ClInclude Include="src\XRSwapchain.h" />
     <ClInclude Include="src\XRSystem.h" />
     <ClInclude Include="src\XRViewConfigurations.h" />
