@@ -143,9 +143,8 @@ int main()
 			session->WaitFrame();
 			session->BeginFrame();
 
-			std::vector<XrCompositionLayerBaseHeader*> layers;
-			XrCompositionLayerProjection layerProjection;
-			std::vector<XrCompositionLayerProjectionView> layerProjectionViews;
+			std::vector<CompositionLayer::BaseHeader*> layers;
+			CompositionLayer::Projection layerProjection;
 
 			if (session->IsActive() && session->m_FrameState.shouldRender)
 			{
@@ -155,30 +154,22 @@ int main()
 					const uint32_t& width = viewConfigurations->m_Views[viewConfigurationType][0].recommendedImageRectWidth;
 					const uint32_t& height = viewConfigurations->m_Views[viewConfigurationType][0].recommendedImageRectHeight;
 
-					layerProjectionViews.resize(views.size());
+					layerProjection.layerFlags = CompositionLayer::Flags::CORRECT_CHROMATIC_ABERRATION_BIT | CompositionLayer::Flags::BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+					layerProjection.space = referenceSpace;
+					layerProjection.views.resize(views.size());
 					size_t i = 0;
 					for (const auto& view : views)
 					{
-						layerProjectionViews[i].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
-						layerProjectionViews[i].next = nullptr;
-						layerProjectionViews[i].pose = views[i].pose;
-						layerProjectionViews[i].fov = views[i].fov;
-						layerProjectionViews[i].subImage.swapchain = swapchain->m_Swapchain;
-						layerProjectionViews[i].subImage.imageRect.offset.x = 0;
-						layerProjectionViews[i].subImage.imageRect.offset.y = 0;
-						layerProjectionViews[i].subImage.imageRect.extent.width = static_cast<int32_t>(width);
-						layerProjectionViews[i].subImage.imageRect.extent.height = static_cast<int32_t>(height);
-						layerProjectionViews[i].subImage.imageArrayIndex = static_cast<uint32_t>(i);
+						layerProjection.views[i].view = views[i];
+						layerProjection.views[i].swapchainSubImage.swapchain = swapchain;
+						layerProjection.views[i].swapchainSubImage.imageRect.offset.x = 0;
+						layerProjection.views[i].swapchainSubImage.imageRect.offset.y = 0;
+						layerProjection.views[i].swapchainSubImage.imageRect.extent.width = static_cast<int32_t>(width);
+						layerProjection.views[i].swapchainSubImage.imageRect.extent.height = static_cast<int32_t>(height);
+						layerProjection.views[i].swapchainSubImage.imageArrayIndex = static_cast<uint32_t>(i);
 						i++;
 					}
-
-					layerProjection.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
-					layerProjection.next = nullptr;
-					layerProjection.layerFlags = XR_COMPOSITION_LAYER_CORRECT_CHROMATIC_ABERRATION_BIT | XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
-					layerProjection.space = referenceSpace->m_Space;
-					layerProjection.viewCount = static_cast<uint32_t>(layerProjectionViews.size());
-					layerProjection.views = layerProjectionViews.data();
-
+					
 					swapchain->Acquire();
 					swapchain->Wait(XR_INFINITE_DURATION);
 					uint32_t imageIndex = swapchain->GetImageIndex();
@@ -201,7 +192,7 @@ int main()
 
 					swapchain->Release();
 
-					layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&layerProjection));
+					layers.push_back(reinterpret_cast<CompositionLayer::BaseHeader*>(&layerProjection));
 				}
 			}
 
