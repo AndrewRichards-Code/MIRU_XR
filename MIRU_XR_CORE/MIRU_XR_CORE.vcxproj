@@ -108,6 +108,7 @@
     <ClInclude Include="src\miru_xr_core.h" />
     <ClInclude Include="src\miru_xr_core_common.h" />
     <ClInclude Include="src\XRActions.h" />
+    <ClInclude Include="src\XRCompositionLayers.h" />
     <ClInclude Include="src\XRInstance.h" />
     <ClInclude Include="src\XRSession.h" />
     <ClInclude Include="src\XRSpace.h" />

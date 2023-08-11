@@ -1,7 +1,7 @@
 #pragma once
 #include "miru_xr_core_common.h"
 #include "XRViewConfigurations.h"
-#include "XRSpace.h"
+#include "XRCompositionLayers.h"
 
 namespace miru
 {
@@ -46,7 +46,7 @@ namespace miru
 
 			void WaitFrame();
 			void BeginFrame();
-			void EndFrame(const std::vector<XrCompositionLayerBaseHeader*>& layers);
+			void EndFrame(const std::vector<CompositionLayer::BaseHeader*>& layers);
 
 			bool LocateViews(SpaceRef space, std::vector<View>& views);
 

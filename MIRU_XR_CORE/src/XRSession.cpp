@@ -2,6 +2,7 @@
 #include "XRSession.h"
 #include "XRInstance.h"
 #include "XRSpace.h"
+#include "XRSwapchain.h"
 #include "XRSystem.h"
 
 #include "d3d12/D3D12Context.h"
@@ -121,16 +122,93 @@ void Session::BeginFrame()
 	MIRU_XR_ASSERT(xrBeginFrame(m_Session, &frameBeginInfo), "ERROR: OPENXR: Failed to begin the XR Frame.");
 }
 
-void Session::EndFrame(const std::vector<XrCompositionLayerBaseHeader*>& layers)
+void Session::EndFrame(const std::vector<CompositionLayer::BaseHeader*>& layers)
 {
+	std::vector<XrCompositionLayerProjection> layerProjections;
+	std::vector<std::vector<XrCompositionLayerProjectionView>> layerProjectionViews;
+	std::vector<XrCompositionLayerQuad> layerQuads;
+
+	layerProjections.reserve(layers.size());
+	layerProjectionViews.reserve(layers.size());
+	layerQuads.reserve(layers.size());
+
+	for (auto& layer : layers)
+	{
+		switch (layer->type)
+		{
+		default:
+		case CompositionLayer::Type::BASE_HEADER:
+		{
+			continue;
+		}
+		case CompositionLayer::Type::PROJECTION:
+		{
+			CompositionLayer::Projection* _layerProjection = reinterpret_cast<CompositionLayer::Projection*>(layer);
+			
+			layerProjectionViews.push_back({});
+			for (auto& _layerProjectionView : _layerProjection->views)
+			{
+				XrCompositionLayerProjectionView layerProjectionView;
+				layerProjectionView.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+				layerProjectionView.next = nullptr;
+				layerProjectionView.pose = _layerProjectionView.view.pose;
+				layerProjectionView.fov = _layerProjectionView.view.fov;
+				layerProjectionView.subImage.swapchain = _layerProjectionView.swapchainSubImage.swapchain->m_Swapchain;
+				layerProjectionView.subImage.imageRect.offset.x = _layerProjectionView.swapchainSubImage.imageRect.offset.x;
+				layerProjectionView.subImage.imageRect.offset.y = _layerProjectionView.swapchainSubImage.imageRect.offset.y;
+				layerProjectionView.subImage.imageRect.extent.width = _layerProjectionView.swapchainSubImage.imageRect.extent.width;
+				layerProjectionView.subImage.imageRect.extent.height = _layerProjectionView.swapchainSubImage.imageRect.extent.height;
+				layerProjectionView.subImage.imageArrayIndex = _layerProjectionView.swapchainSubImage.imageArrayIndex;
+				layerProjectionViews.back().push_back(layerProjectionView);
+			}
+
+			XrCompositionLayerProjection layerProjection;
+			layerProjection.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
+			layerProjection.next = nullptr;
+			layerProjection.layerFlags = static_cast<XrCompositionLayerFlags>(layer->layerFlags);
+			layerProjection.space = layer->space->m_Space;
+			layerProjection.viewCount = static_cast<uint32_t>(layerProjectionViews.back().size());
+			layerProjection.views = layerProjectionViews.back().data();
+			layerProjections.push_back(layerProjection);
+
+			continue;
+		}
+		case CompositionLayer::Type::QUAD:
+		{
+			CompositionLayer::Quad* _layerQuad = reinterpret_cast<CompositionLayer::Quad*>(layer);
+			XrCompositionLayerQuad layerQuad;
+			layerQuad.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
+			layerQuad.next = nullptr;
+			layerQuad.layerFlags = static_cast<XrCompositionLayerFlags>(layer->layerFlags);
+			layerQuad.space = layer->space->m_Space;
+			layerQuad.eyeVisibility = static_cast<XrEyeVisibility>(_layerQuad->eyeVisibility);
+			layerQuad.subImage;
+			layerQuad.pose = _layerQuad->pose;
+			layerQuad.size.width = _layerQuad->width;
+			layerQuad.size.height = _layerQuad->height;
+			layerQuads.push_back(layerQuad);
+			continue;
+		}
+		}
+	}
+
+	std::vector<XrCompositionLayerBaseHeader*> _layers;
+	for (auto& layerProjection : layerProjections)
+		_layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&layerProjection));
+	for (auto& layerQuad : layerQuads)
+		_layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&layerQuad));
+
 	XrFrameEndInfo frameEndInfo;
 	frameEndInfo.type = XR_TYPE_FRAME_END_INFO;
 	frameEndInfo.next = nullptr;
 	frameEndInfo.displayTime = m_FrameState.predictedDisplayTime;
 	frameEndInfo.environmentBlendMode = static_cast<XrEnvironmentBlendMode>(m_EnvironmentBlendMode);
-	frameEndInfo.layerCount = static_cast<uint32_t>(layers.size());
-	frameEndInfo.layers = layers.data();
+	frameEndInfo.layerCount = static_cast<uint32_t>(_layers.size());
+	frameEndInfo.layers = _layers.data();
 	MIRU_XR_ASSERT(xrEndFrame(m_Session, &frameEndInfo), "ERROR: OPENXR: Failed to end the XR Frame.");
+
+	for (auto& layerProjectionView : layerProjectionViews)
+		layerProjectionView.clear();
 }
 
 bool Session::LocateViews(SpaceRef space, std::vector<View>& views)

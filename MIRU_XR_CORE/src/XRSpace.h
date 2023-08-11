@@ -11,7 +11,7 @@ namespace miru
 			mars::float3		position;
 
 			Pose() = default;
-			Pose(XrPosef pose)
+			Pose(const XrPosef& pose)
 			{
 				orientation.s = static_cast<double>(pose.orientation.w);
 				orientation.i = static_cast<double>(pose.orientation.x);
@@ -24,7 +24,7 @@ namespace miru
 			operator XrPosef()
 			{
 				return { 
-{
+					{
 						static_cast<float>(orientation.s),
 						static_cast<float>(orientation.i),
 						static_cast<float>(orientation.j),
@@ -44,7 +44,7 @@ namespace miru
 			float angleDown;
 
 			Fov() = default;
-			Fov(XrFovf fov)
+			Fov(const XrFovf& fov)
 			{
 				angleLeft = fov.angleLeft;
 				angleRight = fov.angleRight;

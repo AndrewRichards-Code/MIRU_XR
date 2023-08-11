@@ -1,6 +1,7 @@
 #pragma once
 
 #include "XRActions.h"
+#include "XRCompositionLayers.h"
 #include "XRInstance.h"
 #include "XRSession.h"
 #include "XRSpace.h"

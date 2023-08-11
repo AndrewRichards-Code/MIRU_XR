@@ -68,5 +68,8 @@
     <ClInclude Include="src\XRSpace.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\XRCompositionLayers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
