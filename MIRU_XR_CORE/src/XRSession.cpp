@@ -5,6 +5,16 @@
 #include "XRSwapchain.h"
 #include "XRSystem.h"
 
+#if defined(MIRU_D3D12)
+#include "d3d12/D3D12_Include.h"
+#define XR_USE_GRAPHICS_API_D3D12
+#endif
+#if defined(MIRU_VULKAN)
+#include "vulkan/VK_Include.h"
+#define XR_USE_GRAPHICS_API_VULKAN
+#endif
+#include "openxr/openxr_platform.h"
+
 #include "d3d12/D3D12Context.h"
 #include "vulkan/VKContext.h"
 
@@ -52,12 +62,12 @@ Session::Session(CreateInfo* pCreateInfo)
 	m_SessionCI.createFlags = 0;
 	m_SessionCI.systemId = m_CI.system->m_SystemID;
 	
-	MIRU_XR_ASSERT(xrCreateSession(m_CI.instance->m_Instance, &m_SessionCI, &m_Session), "ERROR: OPENXR: Failed to create Session.");
+	MIRU_XR_FATAL(xrCreateSession(m_CI.instance->m_Instance, &m_SessionCI, &m_Session), "ERROR: OPENXR: Failed to create Session.");
 }
 
 Session::~Session()
 {
-	MIRU_XR_ASSERT(xrDestroySession(m_Session), "ERROR: OPENXR: Failed to destroy Session.");
+	MIRU_XR_FATAL(xrDestroySession(m_Session), "ERROR: OPENXR: Failed to destroy Session.");
 }
 
 void Session::StateChanged(XrEventDataSessionStateChanged* sessionStateChanged)
@@ -82,17 +92,17 @@ void Session::Begin()
 	m_SessionBI.next = nullptr;
 	m_SessionBI.primaryViewConfigurationType = static_cast<XrViewConfigurationType>(m_Type);
 
-	MIRU_XR_ASSERT(xrBeginSession(m_Session, &m_SessionBI), "ERROR: OPENXR: Failed to begin Session.");
+	MIRU_XR_FATAL(xrBeginSession(m_Session, &m_SessionBI), "ERROR: OPENXR: Failed to begin Session.");
 }
 
 void Session::End()
 {
-	MIRU_XR_ASSERT(xrEndSession(m_Session), "ERROR: OPENXR: Failed to end Session.");
+	MIRU_XR_FATAL(xrEndSession(m_Session), "ERROR: OPENXR: Failed to end Session.");
 }
 
 void Session::RequestExit()
 {
-	MIRU_XR_ASSERT(xrRequestExitSession(m_Session), "ERROR: OPENXR: Failed to request exit Session.");
+	MIRU_XR_FATAL(xrRequestExitSession(m_Session), "ERROR: OPENXR: Failed to request exit Session.");
 }
 
 bool Session::IsActive()
@@ -111,7 +121,7 @@ void Session::WaitFrame()
 	XrFrameWaitInfo frameWaitInfo;
 	frameWaitInfo.type = XR_TYPE_FRAME_WAIT_INFO;
 	frameWaitInfo.next = nullptr;
-	MIRU_XR_ASSERT(xrWaitFrame(m_Session, &frameWaitInfo, &m_FrameState), "ERROR: OPENXR: Failed to wait for XR Frame.");
+	MIRU_XR_FATAL(xrWaitFrame(m_Session, &frameWaitInfo, &m_FrameState), "ERROR: OPENXR: Failed to wait for XR Frame.");
 }
 
 void Session::BeginFrame()
@@ -119,7 +129,7 @@ void Session::BeginFrame()
 	XrFrameBeginInfo frameBeginInfo;
 	frameBeginInfo.type = XR_TYPE_FRAME_BEGIN_INFO;
 	frameBeginInfo.next = nullptr;
-	MIRU_XR_ASSERT(xrBeginFrame(m_Session, &frameBeginInfo), "ERROR: OPENXR: Failed to begin the XR Frame.");
+	MIRU_XR_FATAL(xrBeginFrame(m_Session, &frameBeginInfo), "ERROR: OPENXR: Failed to begin the XR Frame.");
 }
 
 void Session::EndFrame(const std::vector<CompositionLayer::BaseHeader*>& layers)
@@ -205,7 +215,7 @@ void Session::EndFrame(const std::vector<CompositionLayer::BaseHeader*>& layers)
 	frameEndInfo.environmentBlendMode = static_cast<XrEnvironmentBlendMode>(m_EnvironmentBlendMode);
 	frameEndInfo.layerCount = static_cast<uint32_t>(_layers.size());
 	frameEndInfo.layers = _layers.data();
-	MIRU_XR_ASSERT(xrEndFrame(m_Session, &frameEndInfo), "ERROR: OPENXR: Failed to end the XR Frame.");
+	MIRU_XR_FATAL(xrEndFrame(m_Session, &frameEndInfo), "ERROR: OPENXR: Failed to end the XR Frame.");
 
 	for (auto& layerProjectionView : layerProjectionViews)
 		layerProjectionView.clear();
@@ -260,7 +270,7 @@ void* Session::GetMIRUOpenXRData(InstanceRef instance, SystemRef system)
 	{
 		PFN_xrGetD3D12GraphicsRequirementsKHR xrGetD3D12GraphicsRequirementsKHR = (PFN_xrGetD3D12GraphicsRequirementsKHR)GetInstanceProcAddr(instance->m_Instance, "xrGetD3D12GraphicsRequirementsKHR");
 		XrGraphicsRequirementsD3D12KHR graphicsRequirements = { XR_TYPE_GRAPHICS_REQUIREMENTS_D3D12_KHR };
-		MIRU_XR_ASSERT(xrGetD3D12GraphicsRequirementsKHR(instance->m_Instance, system->m_SystemID, &graphicsRequirements), "ERROR: OPENXR: Failed to get Graphics Requirements for D3D12.");
+		MIRU_XR_FATAL(xrGetD3D12GraphicsRequirementsKHR(instance->m_Instance, system->m_SystemID, &graphicsRequirements), "ERROR: OPENXR: Failed to get Graphics Requirements for D3D12.");
 
 		openXRD3D12Data.type = base::Context::CreateInfoExtensionStructureTypes::OPENXR_D3D12_DATA;
 		openXRD3D12Data.pNext = nullptr;
@@ -274,17 +284,17 @@ void* Session::GetMIRUOpenXRData(InstanceRef instance, SystemRef system)
 	{
 		PFN_xrGetVulkanGraphicsRequirementsKHR xrGetVulkanGraphicsRequirementsKHR = (PFN_xrGetVulkanGraphicsRequirementsKHR)GetInstanceProcAddr(instance->m_Instance, "xrGetVulkanGraphicsRequirementsKHR");
 		XrGraphicsRequirementsVulkanKHR graphicsRequirements = { XR_TYPE_GRAPHICS_REQUIREMENTS_VULKAN_KHR };
-		MIRU_XR_ASSERT(xrGetVulkanGraphicsRequirementsKHR(instance->m_Instance, system->m_SystemID, &graphicsRequirements), "ERROR: OPENXR: Failed to get Graphics Requirements for Vulkan.");
+		MIRU_XR_FATAL(xrGetVulkanGraphicsRequirementsKHR(instance->m_Instance, system->m_SystemID, &graphicsRequirements), "ERROR: OPENXR: Failed to get Graphics Requirements for Vulkan.");
 
 		auto GetInstanceExtensionsVulkan = [&](InstanceRef instance, SystemRef system) -> std::vector<std::string>
 		{
 			PFN_xrGetVulkanInstanceExtensionsKHR xrGetVulkanInstanceExtensionsKHR = (PFN_xrGetVulkanInstanceExtensionsKHR)GetInstanceProcAddr(instance->m_Instance, "xrGetVulkanInstanceExtensionsKHR");
 
 			uint32_t extensionNamesSize = 0;
-			MIRU_XR_ASSERT(xrGetVulkanInstanceExtensionsKHR(instance->m_Instance, system->m_SystemID, 0, &extensionNamesSize, nullptr), "ERROR: OPENXR: Failed to get Vulkan Instance Extensions.");
+			MIRU_XR_FATAL(xrGetVulkanInstanceExtensionsKHR(instance->m_Instance, system->m_SystemID, 0, &extensionNamesSize, nullptr), "ERROR: OPENXR: Failed to get Vulkan Instance Extensions.");
 
 			std::vector<char> extensionNames(extensionNamesSize);
-			MIRU_XR_ASSERT(xrGetVulkanInstanceExtensionsKHR(instance->m_Instance, system->m_SystemID, extensionNamesSize, &extensionNamesSize, extensionNames.data()), "ERROR: OPENXR: Failed to get Vulkan Instance Extensions.");
+			MIRU_XR_FATAL(xrGetVulkanInstanceExtensionsKHR(instance->m_Instance, system->m_SystemID, extensionNamesSize, &extensionNamesSize, extensionNames.data()), "ERROR: OPENXR: Failed to get Vulkan Instance Extensions.");
 
 			std::stringstream streamData(extensionNames.data());
 			std::vector<std::string> extensions;
@@ -300,10 +310,10 @@ void* Session::GetMIRUOpenXRData(InstanceRef instance, SystemRef system)
 			PFN_xrGetVulkanDeviceExtensionsKHR xrGetVulkanDeviceExtensionsKHR = (PFN_xrGetVulkanDeviceExtensionsKHR)GetInstanceProcAddr(instance->m_Instance, "xrGetVulkanDeviceExtensionsKHR");
 
 			uint32_t extensionNamesSize = 0;
-			MIRU_XR_ASSERT(xrGetVulkanDeviceExtensionsKHR(instance->m_Instance, system->m_SystemID, 0, &extensionNamesSize, nullptr), "ERROR: OPENXR: Failed to get Vulkan Device Extensions.");
+			MIRU_XR_FATAL(xrGetVulkanDeviceExtensionsKHR(instance->m_Instance, system->m_SystemID, 0, &extensionNamesSize, nullptr), "ERROR: OPENXR: Failed to get Vulkan Device Extensions.");
 
 			std::vector<char> extensionNames(extensionNamesSize);
-			MIRU_XR_ASSERT(xrGetVulkanDeviceExtensionsKHR(instance->m_Instance, system->m_SystemID, extensionNamesSize, &extensionNamesSize, extensionNames.data()), "ERROR: OPENXR: Failed to get Vulkan Device Extensions.");
+			MIRU_XR_FATAL(xrGetVulkanDeviceExtensionsKHR(instance->m_Instance, system->m_SystemID, extensionNamesSize, &extensionNamesSize, extensionNames.data()), "ERROR: OPENXR: Failed to get Vulkan Device Extensions.");
 
 			std::stringstream streamData(extensionNames.data());
 			std::vector<std::string> extensions;
@@ -327,7 +337,7 @@ void* Session::GetMIRUOpenXRData(InstanceRef instance, SystemRef system)
 			PFN_xrGetVulkanGraphicsDeviceKHR xrGetVulkanGraphicsDeviceKHR = (PFN_xrGetVulkanGraphicsDeviceKHR)GetInstanceProcAddr(instance->m_Instance, "xrGetVulkanGraphicsDeviceKHR");
 
 			VkPhysicalDevice physicalDevice;
-			MIRU_XR_ASSERT(xrGetVulkanGraphicsDeviceKHR(instance->m_Instance, system->m_SystemID, vkInstance, &physicalDevice), "ERROR: OPENXR: Failed to get Graphics Device for Vulkan.");
+			MIRU_XR_FATAL(xrGetVulkanGraphicsDeviceKHR(instance->m_Instance, system->m_SystemID, vkInstance, &physicalDevice), "ERROR: OPENXR: Failed to get Graphics Device for Vulkan.");
 			return physicalDevice; 
 		};
 		return &openXRVulkanData;

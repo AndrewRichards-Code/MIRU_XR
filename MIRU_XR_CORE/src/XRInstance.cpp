@@ -1,11 +1,23 @@
 #include "miru_xr_core_common.h"
 #include "XRInstance.h"
 
+#if defined(MIRU_D3D12)
+#include "d3d12/D3D12_Include.h"
+#define XR_USE_GRAPHICS_API_D3D12
+#endif
+#if defined(MIRU_VULKAN)
+#include "vulkan/VK_Include.h"
+#define XR_USE_GRAPHICS_API_VULKAN
+#endif
+#include "openxr/openxr_platform.h"
+
 using namespace miru;
 using namespace xr;
 
 Instance::Instance(CreateInfo* pCreateInfo)
 {
+	MiruXrCoreLog.SetErrorCodeToStringFunction(GetXrResultString);
+
 	m_CI = *pCreateInfo;
 
 	//Instance
@@ -17,6 +29,7 @@ Instance::Instance(CreateInfo* pCreateInfo)
 
 	//Add additional instance layers/extensions
 	{
+		m_APILayers.push_back("XR_APILAYER_LUNARG_core_validation");
 		m_InstanceExtensions.push_back(XR_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
 #if defined(XR_USE_GRAPHICS_API_D3D12)
@@ -31,9 +44,9 @@ Instance::Instance(CreateInfo* pCreateInfo)
 
 	uint32_t apiLayerCount = 0;
 	std::vector<XrApiLayerProperties> apiLayerProperties;
-	MIRU_XR_ASSERT(xrEnumerateApiLayerProperties(0, &apiLayerCount, nullptr), "ERROR: OPENXR: Failed to enumerate ApiLayerProperties.");
+	MIRU_XR_FATAL(xrEnumerateApiLayerProperties(0, &apiLayerCount, nullptr), "ERROR: OPENXR: Failed to enumerate ApiLayerProperties.");
 	apiLayerProperties.resize(apiLayerCount, { XR_TYPE_API_LAYER_PROPERTIES });
-	MIRU_XR_ASSERT(xrEnumerateApiLayerProperties(apiLayerCount, &apiLayerCount, apiLayerProperties.data()), "ERROR: OPENXR: Failed to enumerate ApiLayerProperties.");
+	MIRU_XR_FATAL(xrEnumerateApiLayerProperties(apiLayerCount, &apiLayerCount, apiLayerProperties.data()), "ERROR: OPENXR: Failed to enumerate ApiLayerProperties.");
 	for (auto& requestLayer : m_APILayers)
 	{
 		for (auto& layerProperty : apiLayerProperties)
@@ -46,9 +59,9 @@ Instance::Instance(CreateInfo* pCreateInfo)
 	}
 	uint32_t extensionCount = 0;
 	std::vector<XrExtensionProperties> extensionProperties;
-	MIRU_XR_ASSERT(xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr), "ERROR: OPENXR: Failed to enumerate InstanceExtensionProperties.");
+	MIRU_XR_FATAL(xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr), "ERROR: OPENXR: Failed to enumerate InstanceExtensionProperties.");
 	extensionProperties.resize(extensionCount, { XR_TYPE_EXTENSION_PROPERTIES });
-	MIRU_XR_ASSERT(xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, extensionProperties.data()), "ERROR: OPENXR: Failed to enumerate InstanceExtensionProperties.");
+	MIRU_XR_FATAL(xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, extensionProperties.data()), "ERROR: OPENXR: Failed to enumerate InstanceExtensionProperties.");
 	for (auto& requestExtension : m_InstanceExtensions)
 	{
 		for (auto& extensionProperty : extensionProperties)
@@ -68,7 +81,7 @@ Instance::Instance(CreateInfo* pCreateInfo)
 	m_InstanceCI.enabledApiLayerNames = m_ActiveAPILayers.data();
 	m_InstanceCI.enabledExtensionCount = static_cast<uint32_t>(m_ActiveInstanceExtensions.size());
 	m_InstanceCI.enabledExtensionNames = m_ActiveInstanceExtensions.data();
-	MIRU_XR_ASSERT(xrCreateInstance(&m_InstanceCI, &m_Instance), "ERROR: OPENXR: Failed to create Instance.");
+	MIRU_XR_FATAL(xrCreateInstance(&m_InstanceCI, &m_Instance), "ERROR: OPENXR: Failed to create Instance.");
 
 	//Debug Messenger Callback
 	if (IsActive(m_ActiveInstanceExtensions, XR_EXT_DEBUG_UTILS_EXTENSION_NAME))
@@ -81,12 +94,12 @@ Instance::Instance(CreateInfo* pCreateInfo)
 		m_DebugUtilsMessengerCI.userData = this;
 
 		PFN_xrCreateDebugUtilsMessengerEXT xrCreateDebugUtilsMessengerEXT = (PFN_xrCreateDebugUtilsMessengerEXT)GetInstanceProcAddr(m_Instance, "xrCreateDebugUtilsMessengerEXT");
-		MIRU_XR_ASSERT(xrCreateDebugUtilsMessengerEXT(m_Instance, &m_DebugUtilsMessengerCI, &m_DebugUtilsMessenger), "ERROR: OPENXR: Failed to create DebugUtilsMessenger.");
+		MIRU_XR_FATAL(xrCreateDebugUtilsMessengerEXT(m_Instance, &m_DebugUtilsMessengerCI, &m_DebugUtilsMessenger), "ERROR: OPENXR: Failed to create DebugUtilsMessenger.");
 	}
 
 	m_InstanceProperties.type = XR_TYPE_INSTANCE_PROPERTIES;
 	m_InstanceProperties.next = nullptr;
-	MIRU_XR_ASSERT(xrGetInstanceProperties(m_Instance, &m_InstanceProperties), "ERROR: OPENXR: Failed to get InstanceProperties.");
+	MIRU_XR_FATAL(xrGetInstanceProperties(m_Instance, &m_InstanceProperties), "ERROR: OPENXR: Failed to get InstanceProperties.");
 
 	m_RI.apiVersionMajor = XR_VERSION_MAJOR(m_InstanceProperties.runtimeVersion);
 	m_RI.apiVersionMinor = XR_VERSION_MINOR(m_InstanceProperties.runtimeVersion);
@@ -98,16 +111,16 @@ Instance::~Instance()
 	if (IsActive(m_ActiveInstanceExtensions, XR_EXT_DEBUG_UTILS_EXTENSION_NAME))
 	{
 		PFN_xrDestroyDebugUtilsMessengerEXT xrDestroyDebugUtilsMessengerEXT = (PFN_xrDestroyDebugUtilsMessengerEXT)GetInstanceProcAddr(m_Instance, "xrDestroyDebugUtilsMessengerEXT");
-		MIRU_XR_ASSERT(xrDestroyDebugUtilsMessengerEXT(m_DebugUtilsMessenger), "ERROR: OPENXR: Failed to destroy DebugUtilsMessenger.");
+		MIRU_XR_FATAL(xrDestroyDebugUtilsMessengerEXT(m_DebugUtilsMessenger), "ERROR: OPENXR: Failed to destroy DebugUtilsMessenger.");
 	}
 
-	MIRU_XR_ASSERT(xrDestroyInstance(m_Instance), "ERROR: OPENXR: Failed to destroy Instance.");
+	MIRU_XR_FATAL(xrDestroyInstance(m_Instance), "ERROR: OPENXR: Failed to destroy Instance.");
 }
 
 Path Instance::GetPath(const std::string& path)
 {
 	XrPath xrPath;
-	MIRU_XR_ASSERT(xrStringToPath(m_Instance, path.c_str(), &xrPath), "ERROR: OPENXR: Failed to convert std::string to Path.");
+	MIRU_XR_FATAL(xrStringToPath(m_Instance, path.c_str(), &xrPath), "ERROR: OPENXR: Failed to convert std::string to Path.");
 	return xrPath;
 }
 
@@ -115,9 +128,9 @@ std::string Instance::GetString(const Path& xrPath)
 {
 	std::string path;
 	uint32_t stringLength = 0;
-	MIRU_XR_ASSERT(xrPathToString(m_Instance, xrPath, 0, &stringLength, nullptr), "ERROR: OPENXR: Failed to convert Path to std::string.");
+	MIRU_XR_FATAL(xrPathToString(m_Instance, xrPath, 0, &stringLength, nullptr), "ERROR: OPENXR: Failed to convert Path to std::string.");
 	path.resize(stringLength);
-	MIRU_XR_ASSERT(xrPathToString(m_Instance, xrPath, stringLength, &stringLength, path.data()), "ERROR: OPENXR: Failed to convert Path to std::string.");
+	MIRU_XR_FATAL(xrPathToString(m_Instance, xrPath, stringLength, &stringLength, path.data()), "ERROR: OPENXR: Failed to convert Path to std::string.");
 	return path;
 }
 
@@ -204,8 +217,24 @@ XrBool32 Instance::MessageCallbackFunction(XrDebugUtilsMessageSeverityFlagsEXT m
 	
 	if (arc::BitwiseCheck(messageSeverity, XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT))
 	{
-		MIRU_XR_ASSERT(true, errorMessageStr.c_str());
+		MIRU_XR_FATAL(true, errorMessageStr.c_str());
 	}
+	else if (arc::BitwiseCheck(messageSeverity, XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT))
+	{
+		MIRU_XR_WARN(true, errorMessageStr.c_str());
+	}
+	else if (arc::BitwiseCheck(messageSeverity, XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT))
+	{
+		MIRU_XR_INFO(true, errorMessageStr.c_str());
+	}
+	else if (arc::BitwiseCheck(messageSeverity, XR_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT))
+	{
+		MIRU_XR_INFO(true, errorMessageStr.c_str());
+	}
+	else
+	{
+	}
+
 	return XrBool32();
 }
 

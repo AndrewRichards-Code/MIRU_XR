@@ -1,0 +1,27 @@
+{
+  "fileType": "MSC_RAF",
+  "recompileArguments": [
+    {
+      "hlslFilepath": "$SOLUTION_DIR/MIRU_XR_TEST/res/shaders/basic.hlsl",
+      "outputDirectory": "$BUILD_DIR/shaderbin",
+      "includeDirectories": [ "$MIRU_DIR/MIRU_SHADER_COMPILER/shaders/includes" ],
+      "entryPoint": "vs_main",
+      "shaderModel": "vs_6_1",
+      "macros": [],
+      "cso": true,
+      "spv": true,
+      "dxcArguments": [ "-Zi", "-Od", "-Fd" ]
+    },
+    {
+      "hlslFilepath": "$SOLUTION_DIR/MIRU_XR_TEST/res/shaders/basic.hlsl",
+      "outputDirectory": "$BUILD_DIR/shaderbin",
+      "includeDirectories": [ "$MIRU_DIR/MIRU_SHADER_COMPILER/shaders/includes" ],
+      "entryPoint": "ps_main",
+      "shaderModel": "ps_6_1",
+      "macros": [],
+      "cso": true,
+      "spv": true,
+      "dxcArguments": [ "-Zi", "-Od", "-Fd" ]
+    }
+  ]
+}

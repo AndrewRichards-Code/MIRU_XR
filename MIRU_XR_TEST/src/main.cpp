@@ -1,7 +1,7 @@
 #include "miru_xr_core.h"
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "STBI/stb_image.h"
+#include "stb/stb_image.h"
 
 using namespace miru;
 using namespace xr;
@@ -15,7 +15,6 @@ int main()
 	instanceCI.applicationName = "MIRU_XR_TEST";
 	instanceCI.api = GraphicsAPI::GetAPI();
 	InstanceRef instance = CreateRef<Instance>(&instanceCI);
-
 
 	System::CreateInfo systemCI;
 	systemCI.instance = instance;
@@ -48,7 +47,7 @@ int main()
 
 	ReferenceSpace::CreateInfo referenceSpaceCI;
 	referenceSpaceCI.session = session;
-	referenceSpaceCI.type = ReferenceSpace::Type::VIEW;
+	referenceSpaceCI.type = ReferenceSpace::Type::LOCAL;
 	referenceSpaceCI.pose.orientation = { 1.0, 0.0, 0.0, 0.0 };
 	referenceSpaceCI.pose.position = { 0.0f, 0.0f, 0.0f };
 	ReferenceSpaceRef referenceSpace = CreateRef<ReferenceSpace>(&referenceSpaceCI);
@@ -376,30 +375,19 @@ int main()
 	transferFence->Wait();
 
 	//Basic shader
+	auto compileArguments = base::Shader::LoadCompileArgumentsFromFile("../shaderbin/basic_hlsl.json", { { "\\$SOLUTION_DIR", SOLUTION_DIR }, { "\\$BUILD_DIR", BUILD_DIR } });
 	Shader::CreateInfo shaderCI;
 	shaderCI.debugName = "Basic: Vertex Shader Module";
 	shaderCI.device = context->GetDevice();
 	shaderCI.stageAndEntryPoints = { {Shader::StageBit::VERTEX_BIT, "vs_main"} };
-	shaderCI.binaryFilepath = "res/bin/basic_vs_6_1_vs_main.spv";
+	shaderCI.binaryFilepath = "../shaderbin/basic_vs_6_1_vs_main.spv";
 	shaderCI.binaryCode = {};
-	shaderCI.recompileArguments = {
-		"res/shaders/basic.hlsl",
-		"res/bin",
-		{"../../MIRU/MIRU_SHADER_COMPILER/shaders/includes"},
-		"vs_main",
-		"vs_6_1",
-		{},
-		true,
-		true,
-		{"-Zi", "-Od", "-Fd"},
-		""
-	};
+	shaderCI.recompileArguments = compileArguments[0];
 	ShaderRef vertexShader = Shader::Create(&shaderCI);
 	shaderCI.debugName = "Basic: Fragment Shader Module";
 	shaderCI.stageAndEntryPoints = { { Shader::StageBit::PIXEL_BIT, "ps_main"} };
-	shaderCI.binaryFilepath = "res/bin/basic_ps_6_1_ps_main.spv";
-	shaderCI.recompileArguments.entryPoint = "ps_main";
-	shaderCI.recompileArguments.shaderModel = "ps_6_1";
+	shaderCI.binaryFilepath = "../shaderbin/basic_ps_6_1_ps_main.spv";
+	shaderCI.recompileArguments = compileArguments[1];
 	ShaderRef fragmentShader = Shader::Create(&shaderCI);
 
 	//Basic and Pipeline Descriptor sets
@@ -533,7 +521,7 @@ int main()
 			session->WaitFrame();
 			session->BeginFrame();
 
-			std::vector<CompositionLayer::BaseHeader*> layers;
+			std::vector<CompositionLayer::BaseHeader*> layers = {};
 			CompositionLayer::Projection layerProjection;
 
 			if (session->IsActive() && session->m_FrameState.shouldRender)
@@ -548,8 +536,8 @@ int main()
 					layerProjection.layerFlags = CompositionLayer::Flags::CORRECT_CHROMATIC_ABERRATION_BIT | CompositionLayer::Flags::BLEND_TEXTURE_SOURCE_ALPHA_BIT;
 					layerProjection.space = referenceSpace;
 					layerProjection.views.resize(views.size());
-					size_t i = 0;
-					for (const auto& view : views)
+					
+					for (size_t i = 0; i < layerProjection.views.size(); i++)
 					{
 						layerProjection.views[i].view = views[i];
 						layerProjection.views[i].swapchainSubImage.swapchain = swapchain;
@@ -558,12 +546,11 @@ int main()
 						layerProjection.views[i].swapchainSubImage.imageRect.extent.width = static_cast<int32_t>(width);
 						layerProjection.views[i].swapchainSubImage.imageRect.extent.height = static_cast<int32_t>(height);
 						layerProjection.views[i].swapchainSubImage.imageArrayIndex = static_cast<uint32_t>(i);
-						i++;
 					}
 
-					swapchain->Acquire();
+					uint32_t imageIndex = 0;
+					swapchain->Acquire(imageIndex);
 					swapchain->Wait(XR_INFINITE_DURATION);
-					uint32_t imageIndex = swapchain->GetImageIndex();
 
 					//Render Stuff
 					{
@@ -626,8 +613,8 @@ int main()
 						memcpy(ubData + 0 * 16, proj.GetData(), sizeof(proj));
 						memcpy(ubData + 1 * 16, view[0].GetData(), sizeof(view));
 
-						cpu_alloc_0->SubmitData(ub1->GetAllocation(), 3 * sizeof(mars::float4x4), ubData);
-						cpu_alloc_0->SubmitData(ub2->GetAllocation(), sizeof(mars::float4x4), (void*)modl.GetData());
+						cpu_alloc_0->SubmitData(ub1->GetAllocation(), 0, 3 * sizeof(mars::float4x4), ubData);
+						cpu_alloc_0->SubmitData(ub2->GetAllocation(), 0, sizeof(mars::float4x4), (void*)modl.GetData());
 
 					}
 

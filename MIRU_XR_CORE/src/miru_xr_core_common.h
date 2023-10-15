@@ -11,25 +11,12 @@
 #include <functional>
 
 //MIRU
-#include "miru_core_common.h"
 #include "miru_core.h"
 
 //MARS
 #include "mars.h"
 
 //OpenXR
-#if defined(_WIN64)
-#define XR_USE_PLATFORM_WIN32
-#include "Windows.h"
-#elif defined(__linux__) && !defined(__ANDROID__)
-#define XR_USE_PLATFORM_XLIB
-#define XR_USE_PLATFORM_XCB
-#define XR_USE_PLATFORM_WAYLAND
-#elif defined (__ANDROID__) && (__ANDROID_API__ >= 24)
-#include "android_native_app_glue.h"
-#define XR_USE_PLATFORM_ANDROID
-#endif
-
 #if defined(MIRU_D3D12)
 #define XR_USE_GRAPHICS_API_D3D12
 #endif
@@ -37,7 +24,6 @@
 #define XR_USE_GRAPHICS_API_VULKAN
 #endif
 
-#include "openxr/openxr_platform.h"
 #include "openxr/openxr.h"
 
 //MIRU_XR_API
@@ -53,6 +39,7 @@
 #include "ARC/src/DynamicLibrary.h"
 #include "ARC/src/ScopeAndRef.h"
 #include "ARC/src/Helpers.h"
+#include "ARC/External/magic_enum/magic_enum.hpp"
 
 //MIRU_XR Class Forward Decalaration and Ref types
 #define MIRU_XR_FORWARD_DECLARE_CLASS_AND_REF(_class) class _class; typedef Ref<_class> _class##Ref
@@ -91,10 +78,14 @@ inline arc::Log MiruXrCoreLog("MIRU_XR_CORE");
 #define ARC_LOG_INSTANCE MiruXrCoreLog
 #endif
 
-//Triggered if x != 0
-#define MIRU_XR_ASSERT(x, y) if((x) != 0) { ARC_FATAL(static_cast<int64_t>(x), "%s", y); ARC_ASSERT(false); }
+inline std::string GetXrResultString(int64_t errorCode)
+{
+	return std::string(magic_enum::enum_name(static_cast<XrResult>(errorCode)));
+}
 
-#define MIRU_XR_FATAL(x, y) if((x) != 0) { ARC_FATAL(static_cast<int64_t>(x), "%s", y); }
+#define MIRU_XR_ASSERT(x) ARC_ASSERT((x))
+
+#define MIRU_XR_FATAL(x, y) if((x) != 0) { ARC_FATAL(static_cast<int64_t>(x), "%s", y); ARC_ASSERT(false); }
 #define MIRU_XR_ERROR(x, y) if((x) != 0) { ARC_ERROR(static_cast<int64_t>(x), "%s", y); }
 #define MIRU_XR_WARN(x, y) if((x) != 0) { ARC_WARN(static_cast<int64_t>(x), "%s", y); }
 #define MIRU_XR_INFO(x, y) if((x) != 0) { ARC_INFO(static_cast<int64_t>(x), "%s", y); }
@@ -106,7 +97,7 @@ namespace miru::xr
 	inline PFN_xrVoidFunction GetInstanceProcAddr(XrInstance instance, const char* name)
 	{
 		PFN_xrVoidFunction function = nullptr;
-		MIRU_XR_ASSERT(xrGetInstanceProcAddr(instance, name, &function), "ERROR: OPENXR: Failed to get InstanceProcAddr.");
+		MIRU_XR_FATAL(xrGetInstanceProcAddr(instance, name, &function), "ERROR: OPENXR: Failed to get InstanceProcAddr.");
 		return function;
 	}
 }

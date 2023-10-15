@@ -32,14 +32,19 @@ namespace miru
 				uint32_t			arraySize;
 				uint32_t			mipCount;
 			};
+
 			typedef void* Image;
+			struct SwapchainImage : public XrSwapchainImageBaseHeader
+			{
+				Image image;
+			};
 
 			//Methods
 		public:
 			Swapchain(CreateInfo* pCreateInfo);
 			~Swapchain();
 
-			void Acquire();
+			void Acquire(uint32_t& imageIndex);
 			void Wait(int64_t timeout_ns);
 			void Release();
 
@@ -47,7 +52,6 @@ namespace miru
 			Image GetImage(uint32_t imageIndex);
 
 			inline const uint32_t& GetImageCount() { return m_ImageCount; }
-			inline const uint32_t& GetImageIndex() { return m_ImageIndex; }
 
 			//Members
 		public:
@@ -57,14 +61,8 @@ namespace miru
 			XrSwapchainCreateInfo m_SwapchainCI;
 
 			uint32_t m_ImageCount = 0;
-		#if defined(MIRU_D3D12)
-			std::vector<XrSwapchainImageD3D12KHR> m_SwapchainImagesD3D12;
-		#endif
-		#if defined(MIRU_VULKAN)
-			std::vector<XrSwapchainImageVulkanKHR> m_SwapchainImagesVulkan;
-		#endif
+			std::vector<SwapchainImage> m_SwapchainImages;
 
-			uint32_t m_ImageIndex = 0;
 			XrSwapchainImageAcquireInfo m_SwapchianImageAI;
 			XrSwapchainImageWaitInfo m_SwapchianImageWI;
 			XrSwapchainImageReleaseInfo m_SwapchianImageRI;
