@@ -19,7 +19,7 @@ struct PS_OUT
 
 struct Camera
 {
-	float4x4 proj;
+	float4x4 proj[2];
 	float4x4 view[2];
 };
 MIRU_UNIFORM_BUFFER(0, 0, Camera, camera);
@@ -36,7 +36,7 @@ VS_OUT vs_main(VS_IN IN, uint ViewID : SV_ViewID)
 {
 	VS_OUT OUT;
 
-	OUT.position = mul(IN.position, mul(model.modl, mul(camera.view[ViewID], camera.proj)));
+	OUT.position = mul(IN.position, mul(model.modl, mul(camera.view[ViewID], camera.proj[ViewID])));
 	OUT.texCoords = IN.position.xyz;
 	return OUT;
 }

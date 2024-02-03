@@ -53,6 +53,7 @@ namespace miru
 			static void* GetMIRUOpenXRData(InstanceRef instance, SystemRef system);
 			inline void SetViewConfigurationsType(ViewConfigurations::Type type) { m_Type = type; };
 			inline void SetViewConfigurationsEnvironmentBlendMode(ViewConfigurations::EnvironmentBlendMode environmentBlendMode) { m_EnvironmentBlendMode = environmentBlendMode; };
+			inline void SetViewConfigurationsViewCount(size_t viewCount) { m_ViewCount = viewCount; };
 
 			//Members
 		public:
@@ -60,6 +61,7 @@ namespace miru
 			State m_State = State::UNKNOWN;
 			ViewConfigurations::Type m_Type = ViewConfigurations::Type(0);
 			ViewConfigurations::EnvironmentBlendMode m_EnvironmentBlendMode = ViewConfigurations::EnvironmentBlendMode(0);
+			size_t m_ViewCount = 0;
 
 			XrSession m_Session;
 			XrSessionCreateInfo m_SessionCI;

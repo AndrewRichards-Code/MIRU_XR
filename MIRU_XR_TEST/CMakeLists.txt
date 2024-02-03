@@ -32,6 +32,7 @@ set_property(SOURCE ${HLSL_FILES} PROPERTY VS_SETTINGS "ExcludedFromBuild=true")
 
 target_compile_definitions(MIRU_XR_TEST PRIVATE "BUILD_DIR=\"${CMAKE_BINARY_DIR}\"")
 target_compile_definitions(MIRU_XR_TEST PRIVATE "SOLUTION_DIR=\"${CMAKE_SOURCE_DIR}\"")
+target_compile_definitions(MIRU_XR_TEST PRIVATE "MIRU_DIR=\"${MIRU_DIR}\"")
 
 add_custom_command(TARGET MIRU_XR_TEST POST_BUILD
 	COMMAND "${MIRU_BUILD_DIR}/bin/${CONFIG_NAME}/MIRU_SHADER_COMPILER.exe"

@@ -10,6 +10,7 @@ using namespace base;
 int main()
 {
 	GraphicsAPI::SetAPI(GraphicsAPI::API::D3D12);
+	//GraphicsAPI::SetAPI(GraphicsAPI::API::VULKAN);
 
 	Instance::CreateInfo instanceCI;
 	instanceCI.applicationName = "MIRU_XR_TEST";
@@ -44,6 +45,7 @@ int main()
 	const ViewConfigurations::EnvironmentBlendMode& environmentBlendMode = viewConfigurations->m_EnvironmentBlendModes[viewConfigurationType][0];
 	session->SetViewConfigurationsType(viewConfigurationType);
 	session->SetViewConfigurationsEnvironmentBlendMode(environmentBlendMode);
+	session->SetViewConfigurationsViewCount(viewConfigurations->m_Views[viewConfigurationType].size());
 
 	ReferenceSpace::CreateInfo referenceSpaceCI;
 	referenceSpaceCI.session = session;
@@ -200,7 +202,8 @@ int main()
 	int img_width;
 	int img_height;
 	int bpp;
-	uint8_t* imageData = stbi_load("../../MIRU/Branding/logo.png", &img_width, &img_height, &bpp, 4);
+	std::string imageFilepath = MIRU_DIR + std::string("/Branding/logo.png");
+	uint8_t* imageData = stbi_load(imageFilepath.c_str(), &img_width, &img_height, &bpp, 4);
 	Buffer::CreateInfo imageBufferCI;
 	imageBufferCI.debugName = "MIRU logo upload buffer";
 	imageBufferCI.device = context->GetDevice();
@@ -254,18 +257,18 @@ int main()
 	samplerCI.unnormalisedCoordinates = false;
 	SamplerRef sampler = Sampler::Create(&samplerCI);
 
-	mars::float4x4 proj = mars::float4x4::Perspective(mars::DegToRad(90.0), float(swapchainCI.width) / float(swapchainCI.height), 0.1f, 100.0f);
+	mars::float4x4 proj[2] = { mars::float4x4::Identity(), mars::float4x4::Identity() };
 	mars::float4x4 view[2] = { mars::float4x4::Identity(), mars::float4x4::Identity() };
 	mars::float4x4 modl = mars::float4x4::Translation({ 0.0f, 0.0f, 0.0f });
-	float ubData[3 * sizeof(mars::float4x4)];
-	memcpy(ubData + 0 * 16, proj.GetData(), sizeof(proj));
-	memcpy(ubData + 1 * 16, view[0].GetData(), sizeof(view));
+	float ubData[4 * sizeof(mars::float4x4)];
+	memcpy(ubData + 0 * 16, proj[0].GetData(), sizeof(proj));
+	memcpy(ubData + 2 * 16, view[0].GetData(), sizeof(view));
 
 	Buffer::CreateInfo ubCI;
 	ubCI.debugName = "Camera UB";
 	ubCI.device = context->GetDevice();
 	ubCI.usage = Buffer::UsageBit::UNIFORM_BIT;
-	ubCI.size = 3 * sizeof(mars::float4x4);
+	ubCI.size = 4 * sizeof(mars::float4x4);
 	ubCI.data = ubData;
 	ubCI.allocator = cpu_alloc_0;
 	BufferRef ub1 = Buffer::Create(&ubCI);
@@ -275,7 +278,7 @@ int main()
 	ubViewCamCI.type = BufferView::Type::UNIFORM;
 	ubViewCamCI.buffer = ub1;
 	ubViewCamCI.offset = 0;
-	ubViewCamCI.size = 3 * sizeof(mars::float4x4);
+	ubViewCamCI.size = 4 * sizeof(mars::float4x4);
 	ubViewCamCI.stride = 0;
 	BufferViewRef ubViewCam = BufferView::Create(&ubViewCamCI);
 	ubCI.debugName = "Model UB";
@@ -375,7 +378,7 @@ int main()
 	transferFence->Wait();
 
 	//Basic shader
-	auto compileArguments = base::Shader::LoadCompileArgumentsFromFile("../shaderbin/basic_hlsl.json", { { "\\$SOLUTION_DIR", SOLUTION_DIR }, { "\\$BUILD_DIR", BUILD_DIR } });
+	auto compileArguments = base::Shader::LoadCompileArgumentsFromFile("../shaderbin/basic_hlsl.json", { { "$SOLUTION_DIR", SOLUTION_DIR }, { "$BUILD_DIR", BUILD_DIR }, { "$MIRU_DIR", MIRU_DIR } });
 	Shader::CreateInfo shaderCI;
 	shaderCI.debugName = "Basic: Vertex Shader Module";
 	shaderCI.device = context->GetDevice();
@@ -512,7 +515,8 @@ int main()
 			{
 				session->StateChanged(sessionStateChanged);
 
-				if (sessionStateChanged->state == (XrSessionState)Session::State::EXITING)
+				if (sessionStateChanged->state == (XrSessionState)Session::State::EXITING
+					|| sessionStateChanged->state == (XrSessionState)Session::State::LOSS_PENDING)
 					applicationRunning = false;
 			});
 
@@ -564,7 +568,7 @@ int main()
 							swapchainImageViews[imageIndex], Image::Layout::COLOUR_ATTACHMENT_OPTIMAL,
 							ResolveModeBits::NONE_BIT, nullptr, Image::Layout::UNKNOWN,
 							RenderPass::AttachmentLoadOp::CLEAR, RenderPass::AttachmentStoreOp::STORE,
-							{1.0f, 0.0f, 0.0f, 1.0f} };
+							{0.25f, 0.25f, 0.25f, 1.0f} };
 						RenderingAttachmentInfo depthRAI = { 
 							depthImageView, Image::Layout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 							ResolveModeBits::NONE_BIT, nullptr, Image::Layout::UNKNOWN,
@@ -596,26 +600,32 @@ int main()
 						CommandBuffer::SubmitInfo mainSI = { { imageIndex }, {}, {}, {}, {}, {} };
 						cmdBuffer->Submit({ mainSI }, draws[imageIndex]);
 
-						float fov = abs(views[0].fov.angleLeft) + abs(views[0].fov.angleRight);
-						proj = mars::float4x4::Perspective(fov, float(width) / float(height), 0.1f, 100.0f);
-						if (GraphicsAPI::IsD3D12())
-							proj.f *= -1;
-						views[0].pose.orientation.k *= -1;
-						views[1].pose.orientation.k *= -1;
-						view[0] = mars::float4x4::Inverse(/*views[0].pose.orientation.ToRotationMatrix4<float>() **/ mars::float4x4::Translation(views[0].pose.position));
-						view[1] = mars::float4x4::Inverse(/*views[1].pose.orientation.ToRotationMatrix4<float>() **/ mars::float4x4::Translation(views[0].pose.position));
-						modl = mars::float4x4::Translation({ 0.0f, 0.0f, +3.0f })
-							//* translate(mat4(1.0f), { float(var_x)/10.0f, float(var_y)/10.0f, float(var_z)/10.0f})
-							* mars::float4x4::Rotation((frameNumber * 1.0f) * 3.14159 / 180.0, { 0, 1, 0 })
-							* mars::float4x4::Rotation((frameNumber * 1.0f) * 3.14159 / 180.0, { 1, 0, 0 })
-							* mars::float4x4::Rotation((frameNumber * 1.0f) * 3.14159 / 180.0, { 0, 0, 1 });
+						for (size_t i = 0; i < layerProjection.views.size(); i++)
+						{
+							float angleLeft = views[i].fov.angleLeft;
+							float angleRight = views[i].fov.angleRight;
+							float angleDown = views[i].fov.angleDown;
+							float angleUp = views[i].fov.angleUp;
 
-						memcpy(ubData + 0 * 16, proj.GetData(), sizeof(proj));
-						memcpy(ubData + 1 * 16, view[0].GetData(), sizeof(view));
+							if (GraphicsAPI::IsVulkan())
+								std::swap(angleUp, angleDown);
 
-						cpu_alloc_0->SubmitData(ub1->GetAllocation(), 0, 3 * sizeof(mars::float4x4), ubData);
+							proj[i] = mars::float4x4::PerspectiveOffset(angleLeft, angleRight, angleDown, angleUp, 0.1f, 100.0f, true, true);
+
+							view[i] = mars::float4x4::Inverse(mars::float4x4::Translation(views[i].pose.position) * views[i].pose.orientation.ToRotationMatrix4<float>());
+
+							modl = mars::float4x4::Translation({ 0.0f, 0.0f, -3.0f })
+								//* translate(mat4(1.0f), { float(var_x)/10.0f, float(var_y)/10.0f, float(var_z)/10.0f})
+								* mars::float4x4::Rotation((frameNumber * 1.0f) * 3.14159 / 180.0, { 0, 1, 0 })
+								* mars::float4x4::Rotation((frameNumber * 1.0f) * 3.14159 / 180.0, { 1, 0, 0 })
+								* mars::float4x4::Rotation((frameNumber * 1.0f) * 3.14159 / 180.0, { 0, 0, 1 });
+						}
+
+						memcpy(ubData + 0 * 16, proj[0].GetData(), sizeof(proj));
+						memcpy(ubData + 2 * 16, view[0].GetData(), sizeof(view));
+
+						cpu_alloc_0->SubmitData(ub1->GetAllocation(), 0, 4 * sizeof(mars::float4x4), ubData);
 						cpu_alloc_0->SubmitData(ub2->GetAllocation(), 0, sizeof(mars::float4x4), (void*)modl.GetData());
-
 					}
 
 					swapchain->Release();

@@ -245,12 +245,15 @@ void Instance::PollEvents(
 	PFN_PollEventsCallbackReferenceSpaceChangePending referenceSpaceChangePendingCallback,
 	PFN_PollEventsCallbackSessionStateChanged sessionStateChangedCallback)
 {
-	XrResult result = XR_SUCCESS;
-	while (result == XR_SUCCESS)
+	XrEventDataBuffer eventDataBuffer = {};
+	eventDataBuffer.type = XR_TYPE_EVENT_DATA_BUFFER;
+	auto XrPollEvents = [&]() -> bool {
+		eventDataBuffer = { XR_TYPE_EVENT_DATA_BUFFER };
+		return xrPollEvent(m_Instance, &eventDataBuffer) == XR_SUCCESS;
+		};
+
+	while (XrPollEvents())
 	{
-		XrEventDataBuffer eventDataBuffer = {};
-		eventDataBuffer.type = XR_TYPE_EVENT_DATA_BUFFER;
-		result = xrPollEvent(m_Instance, &eventDataBuffer);
 		switch (eventDataBuffer.type) {
 		case XR_TYPE_EVENT_DATA_EVENTS_LOST:
 		{

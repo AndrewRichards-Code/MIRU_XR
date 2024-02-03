@@ -25,10 +25,10 @@ namespace miru
 			{
 				return { 
 					{
-						static_cast<float>(orientation.s),
 						static_cast<float>(orientation.i),
 						static_cast<float>(orientation.j),
-						static_cast<float>(orientation.k) },
+						static_cast<float>(orientation.k),
+						static_cast<float>(orientation.s) },
 					{
 						position.x,
 						position.y,
